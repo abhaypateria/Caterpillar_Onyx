@@ -62,17 +62,19 @@ export type Intent =
  * Offline keyword matcher for mixed-language speech. TODO(B): extend keywords for ta/kn,
  * and fall back to api.intent() (Gemini) when this returns `unknown` and we're online.
  */
+// `\b` only understands Latin letters, so Tamil/Kannada words end at whitespace/punctuation/end instead.
+const END = String.raw`(?=$|[\s,.!?।])`;
 const KEYWORDS: [Intent['name'], RegExp][] = [
   ['mayday', /mayday|help help|bachao|காப்பாற்று|ಸಹಾಯ/i],
-  ['confirm', /^(confirm|yes|haan|ha|ok|ஆம்|ಹೌದು)\b/i],
-  ['cancel', /^(cancel|no|nahi|nahin|வேண்டாம்|ಬೇಡ)\b/i],
+  ['confirm', new RegExp(`^(confirm|yes|haan|ha|ok|ஆம்|ಹೌದು)${END}`, 'i')],
+  ['cancel', new RegExp(`^(cancel|no|nahi|nahin|வேண்டாம்|ಬೇಡ)${END}`, 'i')],
   ['next_task', /next task|agla kaam|next.*kya|அடுத்த|ಮುಂದಿನ/i],
   ['task_done', /(mark|task|kaam).*(done|complete|ho gaya|khatam)|முடிந்தது|ಮುಗಿದಿದೆ/i],
   ['why_late', /why|kyun|kyon|ஏன்|ಯಾಕೆ/i],
-  ['eta', /eta|kitna time|how long|kab tak|எவ்வளவு நேரம்|ಎಷ್ಟು ಸಮಯ/i],
+  ['eta', /\beta\b|kitna time|how long|kab tak|எவ்வளவு நேரம்|ಎಷ್ಟು ಸಮಯ/i],
   ['start_lesson', /lesson|training|sikh|பாடம்|ಪಾಠ/i],
   ['shift_summary', /shift|summary|kaisa raha|சுருக்கம்|ಸಾರಾಂಶ/i],
-  ['report_incident', /incident|near miss|log karo|report|accident|விபத்து|ಅಪಘಾತ/i],
+  ['report_incident', /incident|near miss|log karo|report|accident|(person|someone|worker|aadmi).*(near|behind|close|peeche|paas)|விபத்து|ಅಪಘಾತ/i],
 ];
 
 export function parseIntent(text: string): Intent {
