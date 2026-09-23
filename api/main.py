@@ -18,14 +18,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).parent / ".env")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-# Free tier is 20 requests/day *per model*, so each extra model adds its own quota.
-GEMINI_FALLBACK_MODELS = os.getenv(
-    "GEMINI_FALLBACK_MODELS", "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-flash-latest,gemini-flash-lite-latest"
-).split(",")
 GROQ_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+# Tried in order. Rate limits are per model (free tier: 1000 req/day, 8000 tokens/min each),
+# so later models cover earlier ones being rate-limited or retired. qwen is last: it also has a
+# 1000 output-tokens/min cap (~3 lessons/min), but it's a different model family.
+GROQ_MODELS = [m.strip() for m in os.getenv(
+    "GROQ_MODELS", "openai/gpt-oss-120b,openai/gpt-oss-20b,qwen/qwen3.8-27b").split(",") if m.strip()]
 SARVAM_KEY = os.getenv("SARVAM_API_KEY", "")
 SARVAM_STT_MODEL = "saarika:v2.5"
 SARVAM_SPEAKER = "priya"
@@ -35,6 +33,9 @@ app = FastAPI(title="Onyx API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 LANG_NAME = {"en": "English", "hi": "Hindi", "ta": "Tamil", "kn": "Kannada"}
+# Name the script explicitly: models otherwise drift into romanised Hindi, which TTS voices read badly.
+LANG_SCRIPT = {"en": "English", "hi": "Hindi written in Devanagari script", "ta": "Tamil written in Tamil script",
+               "kn": "Kannada written in Kannada script"}
 
 # Keyword rules for the offline incident classifier (order = priority; first hit wins).
 INCIDENT_RULES: list[tuple[str, str, list[str]]] = [
@@ -163,7 +164,7 @@ def template_lesson(incident: dict) -> dict:
 
 
 def template_summary(facts: dict, audience: str) -> str:
-    """Readable spoken summary from shift facts when Gemini is unavailable."""
+    """Readable spoken summary from shift facts when no LLM is available."""
     tasks = facts.get("tasksDone")
     total = facts.get("tasksTotal")
     idle = facts.get("idleMin")
@@ -193,7 +194,7 @@ def db():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "gemini": bool(GEMINI_KEY), "groq": bool(GROQ_KEY), "sarvam": bool(SARVAM_KEY)}
+    return {"ok": True, "groq": bool(GROQ_KEY), "llm_models": GROQ_MODELS if GROQ_KEY else [], "sarvam": bool(SARVAM_KEY)}
 
 
 class IncidentBatch(BaseModel):
@@ -214,9 +215,9 @@ def list_incidents():
         return [json.loads(r[0]) for r in con.execute("select data from incidents order by at desc")]
 
 
-# ---------------------------------------------------------------- LLM (Gemini models → Groq)
+# ---------------------------------------------------------------- LLM (Groq models in order)
 class ProviderBusy(Exception):
-    """Rate-limited, overloaded or unavailable: skip this provider for `cooldown` seconds."""
+    """Rate-limited, overloaded, retired or slow: skip this model for `cooldown` seconds."""
 
     def __init__(self, cooldown: float, why: str):
         super().__init__(why)
@@ -226,48 +227,36 @@ class ProviderBusy(Exception):
 _cooldown_until: dict[str, float] = {}
 
 
-async def _gemini(model: str, prompt: str) -> dict:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    body = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
+async def _groq(model: str, prompt: str) -> dict:
     try:
-        async with httpx.AsyncClient(timeout=8) as c:
-            r = await c.post(url, headers={"x-goog-api-key": GEMINI_KEY}, json=body)
-    except httpx.TimeoutException:  # a slow model must not stall every voice command
-        raise ProviderBusy(30, f"timeout {model}")
-    if r.status_code == 429:  # daily quota → skip for an hour; per-minute → a minute
-        raise ProviderBusy(3600 if "PerDay" in r.text else 60, f"429 {model}")
-    if r.status_code in (404, 503):
-        raise ProviderBusy(3600 if r.status_code == 404 else 30, f"{r.status_code} {model}")
-    r.raise_for_status()
-    return json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"])
-
-
-async def _groq(prompt: str) -> dict:
-    try:
-        async with httpx.AsyncClient(timeout=12) as c:
+        async with httpx.AsyncClient(timeout=10) as c:
             r = await c.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {GROQ_KEY}"},
-                json={"model": GROQ_MODEL, "temperature": 0.2, "response_format": {"type": "json_object"},
+                json={"model": model, "temperature": 0.2, "response_format": {"type": "json_object"},
                       "messages": [{"role": "user", "content": prompt}]},
             )
-    except httpx.TimeoutException:
-        raise ProviderBusy(30, "timeout groq")
-    if r.status_code in (429, 503):
-        raise ProviderBusy(60, f"{r.status_code} groq")
+    except httpx.TimeoutException:  # a slow model must not stall every voice command
+        raise ProviderBusy(30, f"timeout {model}")
+    if r.status_code == 429:  # Groq says how long to wait
+        try:
+            wait = float(r.headers.get("retry-after", 60))
+        except ValueError:
+            wait = 60
+        raise ProviderBusy(wait, f"429 {model}")
+    if r.status_code in (500, 502, 503):
+        raise ProviderBusy(30, f"{r.status_code} {model}")
+    if r.status_code == 404 or "decommissioned" in r.text:
+        raise ProviderBusy(3600, f"retired {model}")
     r.raise_for_status()
     return json.loads(r.json()["choices"][0]["message"]["content"])
 
 
 def llm_providers() -> list[tuple[str, object]]:
-    """Ordered chain: each Gemini model (own free quota), then Groq."""
-    chain: list[tuple[str, object]] = []
-    if GEMINI_KEY:
-        for m in dict.fromkeys([GEMINI_MODEL, *GEMINI_FALLBACK_MODELS]):
-            chain.append((f"gemini:{m}", lambda p, m=m: _gemini(m, p)))
-    if GROQ_KEY:
-        chain.append((f"groq:{GROQ_MODEL}", _groq))
-    return chain
+    """Ordered chain of Groq models; each has its own rate limits."""
+    if not GROQ_KEY:
+        return []
+    return [(m, lambda p, m=m: _groq(m, p)) for m in dict.fromkeys(GROQ_MODELS)]
 
 
 async def llm_json(prompt: str) -> dict | None:
@@ -331,7 +320,7 @@ class SummaryIn(BaseModel):
 @app.post("/llm/summary")
 async def summary(body: SummaryIn):
     out = await llm_json(
-        f"Write a short spoken shift summary for the {body.audience} in {LANG_NAME.get(body.lang, 'English')}. "
+        f"Write a short spoken shift summary for the {body.audience} in {LANG_SCRIPT.get(body.lang, 'English')}. "
         "Max 3 sentences, plain words, keep technical terms in English. One thing that went well, one to improve. "
         f'Facts: {json.dumps(body.facts)}. Return JSON {{"text": ...}}.'
     )
@@ -349,7 +338,7 @@ class LessonIn(BaseModel):
 async def lesson(body: LessonIn):
     out = await llm_json(
         f"Turn this real site incident into a 2-minute safety micro-lesson for an excavator operator in "
-        f"{LANG_NAME.get(body.lang, 'English')}. Incident: {json.dumps(body.incident)}. "
+        f"{LANG_SCRIPT.get(body.lang, 'English')}. Incident: {json.dumps(body.incident)}. "
         'Return JSON {"title": str, "steps": [3-4 short sentences], "quiz": [{"q": str, "options": [3 str], "answer": index}]}.'
     )
     if out and out.get("steps"):

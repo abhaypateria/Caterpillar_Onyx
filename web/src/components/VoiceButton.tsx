@@ -155,7 +155,7 @@ export default function VoiceButton() {
     try {
       const text = await listen(lang);
       let intent = parseIntent(text);
-      // Online fallback: let Gemini classify what the offline keywords missed.
+      // Online fallback: let the LLM classify what the offline keywords missed.
       if (intent.name === 'unknown') {
         const remote = await api.intent(text, lang);
         if (remote?.name && remote.name !== 'unknown') intent = { name: remote.name, text } as Intent;

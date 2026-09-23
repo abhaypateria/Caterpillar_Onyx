@@ -60,7 +60,7 @@ export type Intent =
 
 /**
  * Offline keyword matcher for mixed-language speech. TODO(B): extend keywords for ta/kn,
- * and fall back to api.intent() (Gemini) when this returns `unknown` and we're online.
+ * and fall back to api.intent() (LLM) when this returns `unknown` and we're online.
  */
 // `\b` only understands Latin letters, so Tamil/Kannada words end at whitespace/punctuation/end instead.
 const END = String.raw`(?=$|[\s,.!?।])`;
