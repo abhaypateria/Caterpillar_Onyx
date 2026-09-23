@@ -261,12 +261,16 @@ Shift replay shows what happened, and also what *would* have happened:
 - **Synthetic data generator** — Expands the 4 telemetry rows and 5 task rows into thousands of records that follow the observed patterns (idle ↔ unbuckling, skill and weather ↔ overrun). Clearly labelled as synthetic.
 - **State engine backtest** — Percentage of seatbelt / safety events predicted ahead of time, average lead time in minutes, and false alarms per shift.
 - **ETA accuracy** — Mean absolute error of the Onyx ETA vs the planner's estimate, before and during the task.
+
 | Metric | Planner / baseline | Onyx |
 |---|---|---|
-| Safety events predicted ahead | 0% (reactive) | _TBD_ |
-| Average warning lead time | 0 min | _TBD_ |
-| False alarms per shift | — | _TBD_ |
-| Task time MAE | _TBD_ | _TBD_ |
+| Unbuckling events warned ahead | 0% (reactive) | **79%** (control days: 5%) |
+| Average warning lead time | 0 min | **18 min** |
+| False alarms per shift | — | **0.13** |
+| Task time MAE, 5 real tasks (in-sample) | 7.6 min | **0.7 min** |
+| Task time MAE, 60 unseen synthetic tasks (model fitted on the 5 real tasks only) | 13.5 min | **3.9 min** |
+
+Safety numbers come from 40 simulated shifts per scenario (Replay screen). "Control days" unbuckle at random; the low catch rate there shows the state engine is not simply echoing the simulator. All synthetic data is labelled as such in the app.
  
 ## Judge Q&A
  

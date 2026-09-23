@@ -1,5 +1,7 @@
 import type { Lang, Priority } from '../types';
 import { SPEECH_LOCALE } from '../i18n';
+import { recordUtterance, sarvamAvailable, sarvamTts } from './sarvam';
+import { api } from '../api/client';
 
 /**
  * Voice layer contract. Owner: Person B.
@@ -10,33 +12,73 @@ import { SPEECH_LOCALE } from '../i18n';
 // ----- Speaking (priority queue: critical interrupts, warning waits, info only when idle) -----
 const queue: { text: string; lang: Lang; priority: Priority }[] = [];
 let speaking = false;
+let playing: HTMLAudioElement | null = null;
 
 export function speak(text: string, lang: Lang, priority: Priority = 'info') {
-  if (!('speechSynthesis' in window)) return;
-  if (priority === 'critical') { window.speechSynthesis.cancel(); queue.length = 0; speaking = false; }
+  if (!('speechSynthesis' in window) && typeof Audio === 'undefined') return;
+  if (priority === 'critical') {
+    window.speechSynthesis?.cancel();
+    playing?.pause(); playing = null;
+    queue.length = 0; speaking = false;
+  }
   queue.push({ text, lang, priority });
   queue.sort((a, b) => rank(a.priority) - rank(b.priority));
   drain();
 }
 const rank = (p: Priority) => (p === 'critical' ? 0 : p === 'warning' ? 1 : 2);
 
-function drain() {
+/** A device voice for this language, if any (Windows often has none for ta/kn). */
+function deviceVoice(lang: Lang) {
+  const want = SPEECH_LOCALE[lang].toLowerCase();
+  const voices = window.speechSynthesis?.getVoices() ?? [];
+  return voices.find((v) => v.lang.toLowerCase().replace('_', '-') === want)
+    ?? voices.find((v) => v.lang.toLowerCase().startsWith(want.slice(0, 2)));
+}
+
+/** Device voice when available (instant); otherwise Sarvam audio; otherwise best-effort device speech. */
+async function drain() {
   if (speaking || !queue.length) return;
   const next = queue.shift()!;
+  speaking = true;
+  const done = () => { speaking = false; playing = null; drain(); };
+  const voice = deviceVoice(next.lang);
+  if (!voice && (await sarvamAvailable())) {
+    const url = await sarvamTts(next.text, next.lang);
+    if (url && speaking) {
+      const a = new Audio(url);
+      playing = a;
+      a.onended = a.onerror = done;
+      a.play().catch(done);
+      return;
+    }
+  }
+  if (!('speechSynthesis' in window)) return done();
   const u = new SpeechSynthesisUtterance(next.text);
   u.lang = SPEECH_LOCALE[next.lang];
-  const voice = window.speechSynthesis.getVoices().find((v) => v.lang === u.lang);
   if (voice) u.voice = voice;
-  speaking = true;
-  u.onend = u.onerror = () => { speaking = false; drain(); };
+  u.onend = u.onerror = done;
   window.speechSynthesis.speak(u);
 }
 
 // ----- Listening -----
 type SR = { lang: string; interimResults: boolean; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; onerror: (e: unknown) => void; onend: () => void; start: () => void };
 
-/** Browser speech recognition (online, Google servers in Chrome). TODO(B): try Sarvam first via api.transcribe(). */
-export function listen(lang: Lang): Promise<string> {
+/**
+ * Listen for one utterance. Sarvam first (best for Indian languages and code-mixed speech),
+ * then the browser's recognition (Chrome, online). Rejects if neither is available.
+ */
+export async function listen(lang: Lang): Promise<string> {
+  if (await sarvamAvailable()) {
+    const audio = await recordUtterance().catch(() => null);
+    if (!audio) return '';
+    const r = await api.transcribe(audio, lang);
+    if (r) return r.text;
+    // Sarvam failed mid-request: fall through and let the browser try a fresh listen.
+  }
+  return browserListen(lang);
+}
+
+function browserListen(lang: Lang): Promise<string> {
   const W = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
   const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
   if (!Ctor) return Promise.reject(new Error('speech-recognition-unavailable'));
@@ -65,16 +107,16 @@ export type Intent =
 // `\b` only understands Latin letters, so Tamil/Kannada words end at whitespace/punctuation/end instead.
 const END = String.raw`(?=$|[\s,.!?।])`;
 const KEYWORDS: [Intent['name'], RegExp][] = [
-  ['mayday', /mayday|help help|bachao|காப்பாற்று|ಸಹಾಯ/i],
-  ['confirm', new RegExp(`^(confirm|yes|haan|ha|ok|ஆம்|ಹೌದು)${END}`, 'i')],
-  ['cancel', new RegExp(`^(cancel|no|nahi|nahin|வேண்டாம்|ಬೇಡ)${END}`, 'i')],
-  ['next_task', /next task|agla kaam|next.*kya|அடுத்த|ಮುಂದಿನ/i],
-  ['task_done', /(mark|task|kaam).*(done|complete|ho gaya|khatam)|முடிந்தது|ಮುಗಿದಿದೆ/i],
-  ['why_late', /why|kyun|kyon|ஏன்|ಯಾಕೆ/i],
-  ['eta', /\beta\b|kitna time|how long|kab tak|எவ்வளவு நேரம்|ಎಷ್ಟು ಸಮಯ/i],
-  ['start_lesson', /lesson|training|sikh|பாடம்|ಪಾಠ/i],
-  ['shift_summary', /shift|summary|kaisa raha|சுருக்கம்|ಸಾರಾಂಶ/i],
-  ['report_incident', /incident|near miss|log karo|report|accident|(person|someone|worker|aadmi).*(near|behind|close|peeche|paas)|விபத்து|ಅಪಘಾತ/i],
+  ['mayday', /बचाओ|मदद|mayday|help help|bachao|காப்பாற்று|ಸಹಾಯ/i],
+  ['confirm', new RegExp(`^(हाँ|हां|ठीक है|confirm|yes|haan|ha|ok|ஆம்|ಹೌದು)${END}`, 'i')],
+  ['cancel', new RegExp(`^(नहीं|रद्द|cancel|no|nahi|nahin|வேண்டாம்|ಬೇಡ)${END}`, 'i')],
+  ['next_task', /अगला काम|next task|agla kaam|next.*kya|அடுத்த|ಮುಂದಿನ/i],
+  ['task_done', /हो गया|खत्म|ख़त्म|पूरा हो|(mark|task|kaam).*(done|complete|ho gaya|khatam)|முடிந்தது|ಮುಗಿದಿದೆ/i],
+  ['why_late', /क्यों|why|kyun|kyon|ஏன்|ಯಾಕೆ/i],
+  ['eta', /कितना समय|कितना टाइम|कितनी देर|कब तक|\beta\b|kitna time|how long|kab tak|எவ்வளவு நேரம்|ಎಷ್ಟು ಸಮಯ/i],
+  ['start_lesson', /सीख|ट्रेनिंग|पाठ|lesson|training|sikh|பாடம்|ಪಾಠ/i],
+  ['shift_summary', /शिफ्ट|कैसा रहा|shift|summary|kaisa raha|சுருக்கம்|ಸಾರಾಂಶ/i],
+  ['report_incident', /घटना|रिपोर्ट|दुर्घटना|(आदमी|कोई).*(पीछे|पास)|incident|near miss|log karo|report|accident|(person|someone|worker|aadmi).*(near|behind|close|peeche|paas)|விபத்து|ಅಪಘಾತ/i],
 ];
 
 export function parseIntent(text: string): Intent {

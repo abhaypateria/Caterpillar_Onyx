@@ -12,6 +12,14 @@ import time
 from pathlib import Path
 
 import httpx
+
+# Use the OS certificate store so HTTPS works behind antivirus / corporate TLS inspection
+# (e.g. Kaspersky re-signs api.groq.com with its own root, which Python's bundle rejects).
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:  # optional: falls back to Python's default certificates
+    pass
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
