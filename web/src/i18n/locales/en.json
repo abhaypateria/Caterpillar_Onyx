@@ -23,6 +23,32 @@
     "idleUnexplained": "Machine idling for {{min}} minutes. Switch off if waiting."
   },
   "incident": { "title": "Report incident", "types": { "near_miss": "Near miss", "seatbelt": "Seatbelt", "proximity": "Proximity", "damage": "Damage", "injury": "Injury", "other": "Other" }, "describe": "What happened?", "save": "Log incident", "logged": "Incident logged", "auto": "Auto" },
-  "voice": { "listening": "Listening…", "tap": "Tap to speak", "confirm": "Say confirm or cancel", "didntCatch": "Sorry, I didn't catch that." },
+  "voice": {
+    "listening": "Listening…", "tap": "Tap to speak", "confirm": "Say confirm or cancel", "didntCatch": "Sorry, I didn't catch that.",
+    "confirmDone": "Mark {{task}} as done? Say confirm or cancel.", "markedDone": "{{task}} marked done.",
+    "cancelled": "Cancelled.", "nextTask": "Next task: {{task}}, {{min}} minutes.", "noNextTask": "No more tasks today.",
+    "etaSpoken": "{{task}} should finish in about {{min}} minutes.", "incidentPrompt": "Tell me what happened.",
+    "incidentLogged": "Logged as {{type}}. I can turn it into a lesson.", "mayday": "Emergency reported. Supervisor alerted.",
+    "opening": "Opening {{screen}}.", "noActiveTask": "No task is running right now."
+  },
+  "training": {
+    "title": "Training", "recommended": "Recommended for you", "why": "Based on {{reason}}", "lessons": "All lessons",
+    "start": "Start lesson", "play": "Play audio", "next": "Next", "quiz": "Quick check", "correct": "Correct!",
+    "wrong": "Not quite — try again", "finish": "Finish", "done": "Lesson complete", "score": "Score: {{score}}/{{total}}",
+    "fromIncident": "From your incident", "makeLesson": "Turn into a lesson", "noIncidents": "No incidents to learn from yet",
+    "book": "Book an instructor", "booked": "Instructor requested", "steps": "Steps"
+  },
+  "summary": {
+    "title": "Shift summary", "operator": "Operator", "machine": "Machine", "duration": "Duration", "tasks": "Tasks",
+    "idle": "Idle time", "cost": "Idle cost", "alerts": "Safety alerts", "lessons": "Lessons done", "productivity": "Productivity",
+    "speak": "Read it out", "whatsapp": "Send on WhatsApp", "forOwner": "For owner", "forOperator": "For operator",
+    "generating": "Preparing…", "goodShift": "Good shift", "reviewSafety": "Review safety"
+  },
+  "supervisor": {
+    "title": "Supervisor", "fleet": "Fleet status", "incidents": "Incidents", "timeline": "Timeline", "nudges": "Dispatcher actions",
+    "sync": "Sync incidents", "synced": "Synced {{n}}", "syncing": "Syncing…", "offline": "Saved on device — will sync when online",
+    "noIncidents": "No incidents logged", "operator": "Operator", "machine": "Machine", "risk": "Risk", "state": "State",
+    "auto": "Auto-logged", "manual": "Reported", "open": "Open", "close": "Close", "atMachine": "at {{machine}}"
+  },
   "common": { "confirm": "Confirm", "cancel": "Cancel", "minutes": "min", "simulated": "Simulated replay built from the real 2-hourly rows" }
 }

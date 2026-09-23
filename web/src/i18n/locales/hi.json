@@ -23,6 +23,32 @@
     "idleUnexplained": "मशीन {{min}} मिनट से खाली चल रही है। इंतज़ार है तो बंद करें।"
   },
   "incident": { "title": "घटना दर्ज करें", "types": { "near_miss": "बाल-बाल बचे", "seatbelt": "सीटबेल्ट", "proximity": "पास में व्यक्ति", "damage": "नुकसान", "injury": "चोट", "other": "अन्य" }, "describe": "क्या हुआ?", "save": "दर्ज करें", "logged": "घटना दर्ज हो गई", "auto": "ऑटो" },
-  "voice": { "listening": "सुन रहा हूँ…", "tap": "बोलने के लिए दबाएँ", "confirm": "कन्फर्म या कैंसल बोलें", "didntCatch": "माफ़ कीजिए, समझ नहीं आया।" },
+  "voice": {
+    "listening": "सुन रहा हूँ…", "tap": "बोलने के लिए दबाएँ", "confirm": "कन्फर्म या कैंसल बोलें", "didntCatch": "माफ़ कीजिए, समझ नहीं आया।",
+    "confirmDone": "{{task}} पूरा मार्क करें? कन्फर्म या कैंसल बोलें।", "markedDone": "{{task}} पूरा हो गया।",
+    "cancelled": "रद्द कर दिया।", "nextTask": "अगला काम: {{task}}, {{min}} मिनट।", "noNextTask": "आज और कोई काम नहीं।",
+    "etaSpoken": "{{task}} लगभग {{min}} मिनट में पूरा होगा।", "incidentPrompt": "बताइए क्या हुआ।",
+    "incidentLogged": "{{type}} के रूप में दर्ज किया। इससे एक पाठ बना सकते हैं।", "mayday": "आपातकाल दर्ज। सुपरवाइज़र को बताया गया।",
+    "opening": "{{screen}} खोल रहा हूँ।", "noActiveTask": "अभी कोई काम नहीं चल रहा।"
+  },
+  "training": {
+    "title": "ट्रेनिंग", "recommended": "आपके लिए सुझाव", "why": "{{reason}} के आधार पर", "lessons": "सभी पाठ",
+    "start": "पाठ शुरू करें", "play": "आवाज़ चलाएँ", "next": "अगला", "quiz": "छोटा सवाल", "correct": "सही!",
+    "wrong": "बिलकुल नहीं — फिर कोशिश करें", "finish": "समाप्त", "done": "पाठ पूरा", "score": "स्कोर: {{score}}/{{total}}",
+    "fromIncident": "आपकी घटना से", "makeLesson": "पाठ बनाएँ", "noIncidents": "अभी सीखने के लिए कोई घटना नहीं",
+    "book": "इंस्ट्रक्टर बुक करें", "booked": "इंस्ट्रक्टर के लिए अनुरोध भेजा", "steps": "चरण"
+  },
+  "summary": {
+    "title": "शिफ्ट सारांश", "operator": "ऑपरेटर", "machine": "मशीन", "duration": "अवधि", "tasks": "काम",
+    "idle": "खाली समय", "cost": "खाली का खर्च", "alerts": "सुरक्षा अलर्ट", "lessons": "पूरे पाठ", "productivity": "उत्पादकता",
+    "speak": "पढ़कर सुनाएँ", "whatsapp": "व्हाट्सएप पर भेजें", "forOwner": "मालिक के लिए", "forOperator": "ऑपरेटर के लिए",
+    "generating": "तैयार हो रहा है…", "goodShift": "अच्छी शिफ्ट", "reviewSafety": "सुरक्षा देखें"
+  },
+  "supervisor": {
+    "title": "सुपरवाइज़र", "fleet": "फ्लीट स्थिति", "incidents": "घटनाएँ", "timeline": "समयरेखा", "nudges": "डिस्पैचर कार्रवाई",
+    "sync": "घटनाएँ सिंक करें", "synced": "{{n}} सिंक हुईं", "syncing": "सिंक हो रहा है…", "offline": "डिवाइस पर सेव — ऑनलाइन होने पर सिंक होगा",
+    "noIncidents": "कोई घटना दर्ज नहीं", "operator": "ऑपरेटर", "machine": "मशीन", "risk": "खतरा", "state": "स्थिति",
+    "auto": "ऑटो-दर्ज", "manual": "रिपोर्ट किया", "open": "खोलें", "close": "बंद करें", "atMachine": "{{machine}} पर"
+  },
   "common": { "confirm": "कन्फर्म", "cancel": "कैंसल", "minutes": "मिनट", "simulated": "असली 2-घंटे के डेटा से बना सिम्युलेटेड रीप्ले" }
 }
