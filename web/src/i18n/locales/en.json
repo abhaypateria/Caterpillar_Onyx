@@ -1,12 +1,93 @@
 {
-  "app": { "name": "Onyx", "tagline": "The operator's copilot" },
-  "nav": { "dashboard": "Today", "safety": "Safety", "training": "Training", "insights": "Insights", "replay": "Replay", "supervisor": "Supervisor", "summary": "Shift" },
-  "login": { "title": "Who is operating?", "machine": "Machine", "start": "Start shift", "language": "Language" },
-  "dashboard": { "currentTask": "Current task", "upNext": "Up next", "eta": "ETA", "planned": "Planned", "range": "Range", "why": "Why?", "start": "Start", "done": "Done", "cycle": "+1 cycle", "noTasks": "No tasks scheduled" },
-  "status": { "scheduled": "Scheduled", "active": "In progress", "done": "Done" },
-  "factor": { "Beginner": "Beginner operator", "Intermediate": "Intermediate operator", "Cloudy": "Cloudy", "Windy": "Windy", "Rainy": "Rain", "machineAge": "Machine age {{years}} yrs" },
-  "state": { "Productive": "Productive", "Waiting": "Waiting", "Disengaged": "Disengaged", "Fatigued": "Fatigued" },
-  "safety": { "seatbelt": "Seatbelt", "fastened": "Fastened", "unfastened": "Unfastened", "engine": "Engine", "on": "On", "off": "Off", "proximity": "Proximity", "clear": "Clear", "conditions": "Conditions", "breakIn": "Break in {{min}} min", "breakNow": "Take a break now", "risk15": "Risk next 15 min" },
+  "app": {
+    "name": "Onyx",
+    "tagline": "The operator's copilot"
+  },
+  "nav": {
+    "dashboard": "Today",
+    "safety": "Safety",
+    "training": "Training",
+    "insights": "Insights",
+    "replay": "Replay",
+    "supervisor": "Supervisor",
+    "summary": "Shift"
+  },
+  "login": {
+    "title": "Who is operating?",
+    "machine": "Machine",
+    "start": "Start shift",
+    "language": "Language"
+  },
+  "dashboard": {
+    "currentTask": "Current task",
+    "upNext": "Up next",
+    "eta": "ETA",
+    "planned": "Planned",
+    "range": "Range",
+    "why": "Why?",
+    "start": "Start",
+    "done": "Done",
+    "cycle": "+1 cycle",
+    "noTasks": "No tasks scheduled",
+    "onPlan": "On plan: no adjustments",
+    "livePace": "Live pace so far",
+    "confidence": "Confidence",
+    "today": "Today's tasks",
+    "validation": "Planner vs Onyx · organisers' 5 tasks",
+    "errorLine": "Average error: Onyx {{onyx}}% vs planner {{planner}}%. In-sample: the model is fitted on these 5 tasks plus expert priors; the held-out check is in the engine tests."
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "active": "In progress",
+    "done": "Done"
+  },
+  "factor": {
+    "Beginner": "Beginner operator",
+    "Intermediate": "Intermediate operator",
+    "Cloudy": "Cloudy",
+    "Windy": "Windy",
+    "Rainy": "Rain",
+    "machineAge": "Machine age {{years}} yrs"
+  },
+  "state": {
+    "Productive": "Productive",
+    "Waiting": "Waiting",
+    "Disengaged": "Disengaged",
+    "Fatigued": "Fatigued"
+  },
+  "safety": {
+    "seatbelt": "Seatbelt",
+    "fastened": "Fastened",
+    "unfastened": "Unfastened",
+    "engine": "Engine",
+    "on": "On",
+    "off": "Off",
+    "proximity": "Proximity",
+    "clear": "Clear",
+    "conditions": "Conditions",
+    "breakIn": "Break in {{min}} min",
+    "breakNow": "Take a break now",
+    "risk15": "Risk next 15 min",
+    "machine": "Machine",
+    "interlockNote": "Onyx alerts and logs. Machine interlocks stay with the OEM system; Onyx never controls the machine.",
+    "breakTitle": "Heat & breaks",
+    "workRest": "work/rest per hour",
+    "continuous": "working for",
+    "tookBreak": "Took a break",
+    "liveWeather": "Live weather",
+    "weatherOffline": "Offline: using manual conditions.",
+    "weatherLive": "Live from Open-Meteo",
+    "weather": "Weather",
+    "ground": "Ground",
+    "light": "Light",
+    "dust": "Dust",
+    "heatIndex": "Feels like",
+    "buffers": "Warn at {{warn}} m · stop at {{stop}} m (widened for conditions)",
+    "simulate": "Simulate worker approaching",
+    "camOn": "Camera detection",
+    "camOff": "Stop camera",
+    "camError": "Camera unavailable. Using the simulated sensor."
+  },
   "alert": {
     "seatbelt": "Fasten your seatbelt.",
     "seatbeltSupervisor": "Seatbelt still unfastened. Supervisor notified.",
@@ -22,7 +103,110 @@
     "swapTaskOrder": "Weather risk: consider swapping task order.",
     "idleUnexplained": "Machine idling for {{min}} minutes. Switch off if waiting."
   },
-  "incident": { "title": "Report incident", "types": { "near_miss": "Near miss", "seatbelt": "Seatbelt", "proximity": "Proximity", "damage": "Damage", "injury": "Injury", "other": "Other" }, "describe": "What happened?", "save": "Log incident", "logged": "Incident logged", "auto": "Auto" },
-  "voice": { "listening": "Listening…", "tap": "Tap to speak", "confirm": "Say confirm or cancel", "didntCatch": "Sorry, I didn't catch that." },
-  "common": { "confirm": "Confirm", "cancel": "Cancel", "minutes": "min", "simulated": "Simulated replay built from the real 2-hourly rows" }
+  "incident": {
+    "title": "Report incident",
+    "types": {
+      "near_miss": "Near miss",
+      "seatbelt": "Seatbelt",
+      "proximity": "Proximity",
+      "damage": "Damage",
+      "injury": "Injury",
+      "other": "Other"
+    },
+    "describe": "What happened?",
+    "save": "Log incident",
+    "logged": "Incident logged",
+    "auto": "Auto",
+    "type": "Type",
+    "severity": "Severity",
+    "log": "Incident log",
+    "none": "No incidents yet"
+  },
+  "voice": {
+    "listening": "Listening…",
+    "tap": "Tap to speak",
+    "confirm": "Say confirm or cancel",
+    "didntCatch": "Sorry, I didn't catch that."
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "minutes": "min",
+    "simulated": "Simulated replay built from the real 2-hourly rows"
+  },
+  "heat": {
+    "ok": "normal",
+    "caution": "caution",
+    "high": "high heat",
+    "extreme": "extreme heat"
+  },
+  "dir": {
+    "front": "in front",
+    "rear": "behind",
+    "left": "on the left",
+    "right": "on the right"
+  },
+  "severity": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "replay": {
+    "play": "Replay shift",
+    "demoDay": "Demo day: late truck (matches the real 10:00 row)",
+    "controlDay": "Control day: unbuckling at random",
+    "warns": "Onyx warns",
+    "beltOff": "Belt off",
+    "state": "Operator state",
+    "cause": "Likely cause",
+    "toOperator": "To operator",
+    "toSupervisor": "To supervisor",
+    "reveal": "Onyx warned at {{warn}}. The seatbelt came off at {{off}}. {{lead}} minutes early.",
+    "revealNote": "A seatbelt beep reacts at {{off}}. Onyx saw the late truck and the rising idle and warned while the operator was still belted.",
+    "realRows": "Organisers' real data",
+    "realNote": "Both alerts in the real data happened in windows of long idling and very few cycles. The simulated 5-minute replay above is built to match those 2-hourly rows.",
+    "backtest": "Backtest",
+    "linked": "Idle → unbuckle days",
+    "control": "Control days",
+    "beep": "Beep only",
+    "btEvents": "Unbuckling events",
+    "btCatch": "Warned ahead",
+    "btLead": "Average lead time",
+    "btFalse": "False alarms per shift",
+    "btNote": "{{n}} simulated shifts each. Control days unbuckle at random: a low catch rate there shows the model is not simply echoing the simulator."
+  },
+  "cause": {
+    "truck_delay": "Waiting for truck",
+    "fatigue_heat": "Fatigue / heat",
+    "weather": "Weather",
+    "unexplained": "Unexplained idling",
+    "none": "Working normally"
+  },
+  "insights": {
+    "idleCost": "Idle cost (real rows)",
+    "costNote": "Assumes {{lph}} L/h idle burn and ₹{{inr}}/L diesel.",
+    "idleShare": "Idle share of running time",
+    "fleetAvg": "Industry average",
+    "target": "Target {{pct}}%",
+    "avgIdle": "Average idle share in the real rows: {{pct}}%.",
+    "profile": "Operator profile",
+    "pSafety": "Safety",
+    "pIdle": "Idle discipline",
+    "pProductivity": "Productivity",
+    "pFuel": "Fuel efficiency",
+    "noData": "No telemetry for this operator yet.",
+    "coaching": "For coaching, not punishment.",
+    "observations": "Observations",
+    "findings": "Observations",
+    "example": "synthetic example",
+    "normal": "Normal",
+    "observationNote": "Observations are for review, not accusations. Fuel is compared with expected use from idle time, cycles and running time; one synthetic example row shows a mismatch."
+  },
+  "finding": {
+    "excess_idle": "Long idle ({{value}})",
+    "low_productivity": "High fuel per cycle ({{value}} L)",
+    "seatbelt": "Seatbelt off",
+    "fuel_mismatch": "Fuel above expected ({{value}} vs {{baseline}} L)",
+    "outlier": "Unusual (z={{value}})"
+  }
 }

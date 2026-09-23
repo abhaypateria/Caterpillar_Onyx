@@ -6,6 +6,7 @@ import { LANG_LABEL } from '../i18n';
 import type { Lang } from '../types';
 import AlertBanner from './AlertBanner';
 import VoiceButton from './VoiceButton';
+import SafetyMonitor from './a/SafetyMonitor';
 import './layout.css';
 
 const NAV = ['dashboard', 'safety', 'replay', 'insights', 'training', 'summary', 'supervisor'] as const;
@@ -32,6 +33,7 @@ export default function Layout() {
       </nav>
       <main className="page"><Outlet /></main>
       <VoiceButton />
+      <SafetyMonitor />
     </div>
   );
 }

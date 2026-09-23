@@ -31,8 +31,9 @@ export function shiftWindows(o: ShiftOptions): Window[] {
     const delay = delays.find((d) => t >= d.s - 20 && t < d.e);
     const waiting = delays.some((d) => t >= d.s && t < d.e);
     const truckEtaMin = delay ? Math.max(0, delay.e - t) : null;
-    const hours = (t - start) / 60;
     const lunch = t >= toMin('12:00') && t < toMin('12:45');
+    // Hours since the last break (lunch resets it); drives fatigue.
+    const hours = (t - (t >= toMin('12:45') ? toMin('12:45') : start)) / 60;
     const engineOn = !lunch;
     let cycles = 0, idle = 0;
     if (!engineOn) { idle = 0; }

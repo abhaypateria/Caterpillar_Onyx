@@ -1,0 +1,40 @@
+/* Person A screens */
+.bars { display: grid; gap: 10px; }
+.barrow { display: grid; grid-template-columns: minmax(90px, 30%) 1fr 64px; gap: 10px; align-items: center; }
+.barlabel { color: var(--text); font-size: 14px; }
+.bartrack { position: relative; height: 12px; background: var(--surface-2); border-radius: 4px; }
+.barfill { position: absolute; inset: 0 auto 0 0; background: var(--cat); border-radius: 0 4px 4px 0; }
+.barref { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text); }
+.barval { text-align: right; color: var(--text); }
+
+.hero { display: grid; gap: 16px; grid-template-columns: 2fr 1fr; }
+@media (max-width: 800px) { .hero { grid-template-columns: 1fr; } }
+.bignum { font-family: var(--display); font-size: clamp(56px, 12vw, 104px); line-height: .9; color: var(--text); }
+.kicker { text-transform: uppercase; letter-spacing: 1px; font-size: 13px; color: var(--muted); font-weight: 700; }
+.why { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.why li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 6px 0; }
+.progress { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; margin: 12px 0; }
+.progress > span { display: block; height: 100%; background: var(--cat); }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.tasklist { list-style: none; padding: 0; margin: 0; }
+.tasklist li { display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
+table.data { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.data th, table.data td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data th { color: var(--muted); font-weight: 600; }
+.tablewrap { overflow-x: auto; }
+.statusgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bigtoggle { height: 110px; font-size: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.bigtoggle.okstate { background: color-mix(in srgb, var(--ok) 20%, var(--surface)); color: var(--text); border: 2px solid var(--ok); }
+.bigtoggle.stopstate { background: color-mix(in srgb, var(--stop) 25%, var(--surface)); color: var(--text); border: 2px solid var(--stop); }
+.bigtoggle.offstate { background: var(--surface-2); color: var(--muted); border: 2px solid var(--line); }
+.radar { display: block; margin: 0 auto; max-width: 100%; }
+.camwrap { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 10px; overflow: hidden; }
+.camwrap video, .camwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.statebars { display: grid; gap: 8px; }
+.reveal { border-left: 4px solid var(--cat); }
+.field { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+/* Let grid children shrink so wide tables scroll inside their card instead of widening the page. */
+.grid > *, .hero > *, .card { min-width: 0; }
+.field input, .field select { width: 100%; min-width: 0; }
+.tasklist li.empty { display: block; }

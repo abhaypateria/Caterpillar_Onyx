@@ -26,8 +26,9 @@ const B: Record<keyof Obs, number[][]> = {
   cycles: [[0.05, 0.25, 0.70], [0.60, 0.35, 0.05], [0.55, 0.30, 0.15], [0.25, 0.55, 0.20]],
   idle:   [[0.75, 0.20, 0.05], [0.10, 0.40, 0.50], [0.05, 0.20, 0.75], [0.30, 0.45, 0.25]],
   belt:   [[0.02, 0.98], [0.08, 0.92], [0.70, 0.30], [0.05, 0.95]],
-  shift:  [[0.40, 0.40, 0.20], [0.35, 0.40, 0.25], [0.30, 0.40, 0.30], [0.05, 0.25, 0.70]],
-  heat:   [[0.50, 0.35, 0.15], [0.45, 0.35, 0.20], [0.40, 0.35, 0.25], [0.10, 0.30, 0.60]],
+  // Hours since last break and heat nudge toward Fatigued but must not outweigh visible productive work.
+  shift:  [[0.35, 0.40, 0.25], [0.35, 0.40, 0.25], [0.30, 0.40, 0.30], [0.10, 0.35, 0.55]],
+  heat:   [[0.45, 0.35, 0.20], [0.45, 0.35, 0.20], [0.40, 0.35, 0.25], [0.15, 0.35, 0.50]],
 };
 
 export function discretise(w: Window, heatIndexC: number): Obs {
@@ -68,6 +69,8 @@ export const FORECAST_STEPS = 3; // 3 × 5 min = 15 min ahead
 
 /** Forward algorithm step: α_t = normalise((α_{t−1} · A) ⊙ B(o_t)). */
 export function step(prev: number[] | null, w: Window, heatIndexC: number): FilterStep {
+  // Engine off (break / lunch): no operating risk, and the break resets the operator state.
+  if (!w.engineOn) return { t: w.t, belief: [...PI], forecast: [...PI], risk: 0, state: 'Productive', alarm: false };
   const A = contextA(w, heatIndexC);
   const e = emission(discretise(w, heatIndexC));
   const prior = prev ? vecMat(prev, A) : PI;

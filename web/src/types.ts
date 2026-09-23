@@ -33,6 +33,8 @@ export interface ScheduledTask {
   id: string; time: string; type: string; site: string;
   plannedMin: number; totalCycles: number; doneCycles: number; startedAt: number | null;
   status: TaskStatus;
+  /** Simulated work minutes so far (demo clock; advanced per load cycle). */
+  elapsedMin?: number;
 }
 
 export type Severity = 'low' | 'medium' | 'high';
