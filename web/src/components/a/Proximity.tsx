@@ -104,7 +104,14 @@ export default function Proximity() {
       if (lastLevel.current === 'ok') say('alert.proximityWarn', 'warning', params);
     }
     lastLevel.current = engineOn ? level : 'ok';
-  }, [level, engineOn, nearest.d, nearest.dir, th.stop, t]);
+  }, [level, engineOn, nearest.dir, th.stop, t]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the banner distance current while an alert is showing (without re-speaking).
+  const shown = nearest.d.toFixed(1);
+  useEffect(() => {
+    const k = level === 'stop' ? 'alert.proximityStop' : 'alert.proximityWarn';
+    useStore.setState((st) => ({ alerts: st.alerts.map((a) => (a.key === k ? { ...a, params: { ...a.params, dist: shown } } : a)) }));
+  }, [shown, level]);
 
   // Radar drawing: rings at stop / warn / 20 m.
   const R = 130, scale = R / 20, c = 150;

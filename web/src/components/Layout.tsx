@@ -19,7 +19,7 @@ export default function Layout() {
     <div className="shell">
       <header className="top">
         <span className="display brand">ONYX</span>
-        <span className="muted">{op?.name} · {operatorId} · {machineId}</span>
+        <span className="muted who">{op?.name}<span className="full"> · {operatorId} · {machineId}</span></span>
         <span className="spacer" />
         <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} aria-label={t('login.language')}>
           {Object.entries(LANG_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

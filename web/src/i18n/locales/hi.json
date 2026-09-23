@@ -159,14 +159,17 @@
     "cause": "संभावित कारण",
     "toOperator": "ऑपरेटर को",
     "toSupervisor": "सुपरवाइज़र को",
-    "reveal": "Onyx ने {{warn}} पर चेताया। बेल्ट {{off}} पर खुली। {{lead}} मिनट पहले।"
+    "reveal": "Onyx ने {{warn}} पर चेताया। बेल्ट {{off}} पर खुली। {{lead}} मिनट पहले।",
+    "riskLabel": "बेल्ट खतरा · 15 मिनट",
+    "fatigue": "थकान"
   },
   "cause": {
     "truck_delay": "ट्रक का इंतज़ार",
     "fatigue_heat": "थकान / गर्मी",
     "weather": "मौसम",
     "unexplained": "बिना वजह खाली",
-    "none": "सामान्य काम"
+    "none": "सामान्य काम",
+    "unbelted": "चलाते समय सीटबेल्ट खुली"
   },
   "insights": {
     "idleCost": "खाली चलने का खर्च",

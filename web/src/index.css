@@ -31,3 +31,13 @@ h1, h2, h3 { margin: 0 0 12px; }
 .hazard { background: repeating-linear-gradient(45deg, var(--cat) 0 14px, #111 14px 28px); height: 6px; }
 .page { padding: 16px; max-width: 1200px; margin: 0 auto; padding-bottom: 110px; }
 .todo { border: 2px dashed var(--line); border-radius: var(--radius); padding: 24px; color: var(--muted); }
+
+/* Refinements */
+button { transition: transform .08s ease, background-color .15s ease; }
+button:active:not(:disabled) { transform: scale(.98); }
+button:disabled { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); opacity: 1; cursor: default; }
+:focus-visible { outline: 3px solid var(--cat); outline-offset: 2px; }
+select { max-width: 100%; }
+.page > * { animation: rise .22s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .page > *, button { animation: none; transition: none; } }

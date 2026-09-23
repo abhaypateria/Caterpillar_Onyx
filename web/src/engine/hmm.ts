@@ -61,28 +61,31 @@ export function contextA(w: Window, heatIndexC: number): number[][] {
 const normalise = (v: number[]) => { const s = v.reduce((a, b) => a + b, 0) || 1; return v.map((x) => x / s); };
 
 export interface FilterStep {
-  t: string; belief: number[]; forecast: number[]; risk: number; state: State; alarm: boolean;
+  t: string; belief: number[]; forecast: number[]; risk: number; fatigue: number; state: State; alarm: boolean;
 }
 
-export const RISK_THRESHOLD = 0.6;
+export const RISK_THRESHOLD = 0.5;
 export const FORECAST_STEPS = 3; // 3 × 5 min = 15 min ahead
 
 /** Forward algorithm step: α_t = normalise((α_{t−1} · A) ⊙ B(o_t)). */
 export function step(prev: number[] | null, w: Window, heatIndexC: number): FilterStep {
   // Engine off (break / lunch): no operating risk, and the break resets the operator state.
-  if (!w.engineOn) return { t: w.t, belief: [...PI], forecast: [...PI], risk: 0, state: 'Productive', alarm: false };
+  if (!w.engineOn) return { t: w.t, belief: [...PI], forecast: [...PI], risk: 0, fatigue: 0, state: 'Productive', alarm: false };
   const A = contextA(w, heatIndexC);
   const e = emission(discretise(w, heatIndexC));
   const prior = prev ? vecMat(prev, A) : PI;
   const belief = normalise(prior.map((p, i) => p * e[i]));
-  // Risk = P(reaching Disengaged or Fatigued at any point in the next 15 min):
+  // P(reaching Disengaged / Fatigued at any point in the next 15 min):
   // forecast with those states made absorbing so a brief recovery doesn't hide the danger.
   const absorbing = A.map((r, i) => (i === D || i === F ? r.map((_, j) => +(i === j)) : r));
   let forecast = belief;
   for (let k = 0; k < FORECAST_STEPS; k++) forecast = vecMat(forecast, absorbing);
-  const risk = forecast[D] + forecast[F];
+  // Two separate signals: disengagement drives the unsafe-moment alarm; fatigue drives break advice.
+  // Mixing them made mid-shift heat fatigue look like an imminent unbuckling.
+  const risk = forecast[D];
+  const fatigue = forecast[F];
   const state = STATES[belief.indexOf(Math.max(...belief))];
-  return { t: w.t, belief, forecast, risk, state, alarm: risk > RISK_THRESHOLD && state !== 'Disengaged' };
+  return { t: w.t, belief, forecast, risk, fatigue, state, alarm: risk > RISK_THRESHOLD && state !== 'Disengaged' };
 }
 
 /** Run the filter over a whole replay. heat(w) supplies the heat index for each window. */

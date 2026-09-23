@@ -66,7 +66,7 @@ export default function Dashboard() {
             {live && <span>{live.perCycle.toFixed(2)} min/cycle</span>}
           </div>
           <div className="actions">
-            <button disabled={current.status === 'active'} onClick={() => updateTask(current.id, { status: 'active', startedAt: Date.now() })}>▶ {t('dashboard.start')}</button>
+            <button disabled={current.status === 'active'} onClick={() => updateTask(current.id, { status: 'active', startedAt: Date.now() })}>{current.status === 'active' ? `● ${t('status.active')}` : `▶ ${t('dashboard.start')}`}</button>
             <button className="ghost" disabled={current.status !== 'active'} onClick={addCycle}>{t('dashboard.cycle')}</button>
             <button className="ghost" onClick={() => updateTask(current.id, { status: 'done' })}>✓ {t('dashboard.done')}</button>
           </div>

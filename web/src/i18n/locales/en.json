@@ -173,14 +173,17 @@
     "btCatch": "Warned ahead",
     "btLead": "Average lead time",
     "btFalse": "False alarms per shift",
-    "btNote": "{{n}} simulated shifts each. Control days unbuckle at random: a low catch rate there shows the model is not simply echoing the simulator."
+    "btNote": "{{n}} simulated shifts each. Control days unbuckle at random: a low catch rate there shows the model is not simply echoing the simulator.",
+    "riskLabel": "Unbuckle risk · 15 min",
+    "fatigue": "Fatigue"
   },
   "cause": {
     "truck_delay": "Waiting for truck",
     "fatigue_heat": "Fatigue / heat",
     "weather": "Weather",
     "unexplained": "Unexplained idling",
-    "none": "Working normally"
+    "none": "Working normally",
+    "unbelted": "Seatbelt off while operating"
   },
   "insights": {
     "idleCost": "Idle cost (real rows)",

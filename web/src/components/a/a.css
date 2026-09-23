@@ -38,3 +38,11 @@ table.data th { color: var(--muted); font-weight: 600; }
 .grid > *, .hero > *, .card { min-width: 0; }
 .field input, .field select { width: 100%; min-width: 0; }
 .tasklist li.empty { display: block; }
+.scenario { flex: 1 1 220px; width: 100%; min-width: 0; text-overflow: ellipsis; }
+.controls { flex: 1 1 320px; min-width: 0; }
+.page > div { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 560px) {
+  .actions { gap: 8px; }
+  .actions button { padding: 0 8px; font-size: 15px; }
+  .bignum { font-size: 64px; }
+}

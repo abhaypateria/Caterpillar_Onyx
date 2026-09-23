@@ -75,13 +75,14 @@ export default function Replay() {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <div className="row">
+        <div className="row controls">
           <button onClick={() => { if (idx >= windows.length - 1) setIdx(0); setPlaying(!playing); }}>{playing ? '❚❚' : '▶'} {t('replay.play')}</button>
-          <button className="ghost" onClick={() => { setPlaying(false); setIdx(0); }}>⟲</button>
+          <button className="ghost" onClick={() => { setPlaying(false); setIdx(0); }} aria-label="restart">⟲</button>
+          <button className="ghost" onClick={() => { setIdx(windows.findIndex((x) => x.t.slice(11, 16) >= "08:50")); setPlaying(true); }}>⏭ 08:50</button>
           <select value={speed} onChange={(e) => setSpeed(+e.target.value)} aria-label="speed">
             {[2, 4, 8].map((x) => <option key={x} value={x}>{x}×</option>)}
           </select>
-          <select value={scenario} onChange={(e) => { setScenario(e.target.value as Scenario); setIdx(0); setPlaying(false); }}>
+          <select className="scenario" value={scenario} onChange={(e) => { setScenario(e.target.value as Scenario); setIdx(0); setPlaying(false); }}>
             <option value="demo">{t('replay.demoDay')}</option>
             <option value="control">{t('replay.controlDay')}</option>
           </select>
@@ -102,7 +103,10 @@ export default function Replay() {
                 <span className="pill mono">{w.tempC}°C</span>
               </div>
             </div>
-            <Gauge value={s.risk} threshold={RISK_THRESHOLD} label={t('safety.risk15')} />
+            <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
+              <Gauge value={s.risk} threshold={RISK_THRESHOLD} label={t('replay.riskLabel')} />
+              <span className={`pill ${s.fatigue > 0.5 ? "warn" : ""}`}>{t('replay.fatigue')} {Math.round(s.fatigue * 100)}%</span>
+            </div>
           </div>
           <RiskChart
             points={steps.map((x) => ({ label: hhmm(x.t), value: x.risk }))}
@@ -121,7 +125,7 @@ export default function Replay() {
           <Bars rows={STATES.map((st, i) => ({ label: t(`state.${st}`), value: s.belief[i], highlight: st === s.state }))} />
           <div>
             <div className="kicker">{t('replay.cause')}</div>
-            <div style={{ fontWeight: 700 }}>{t(`cause.${cause}`)}</div>
+            <div style={{ fontWeight: 700 }}>{!w.seatbelt && w.engineOn ? t('cause.unbelted') : t(`cause.${cause}`)}</div>
           </div>
           {action && (
             <div className="card" style={{ background: 'var(--surface-2)' }}>

@@ -13,3 +13,11 @@
 .voicebtn.on { animation: pulse 1s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--cat) 25%, transparent); } }
 .voicetext { position: fixed; right: 108px; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); max-width: min(420px, 70vw); }
+.who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) {
+  .top { gap: 8px; padding-inline: 12px; }
+  .brand { font-size: 24px; }
+  .who .full { display: none; }
+  .nav a { padding: 10px 12px; }
+  .voicebtn { width: 64px; height: 64px; right: 14px; }
+}
