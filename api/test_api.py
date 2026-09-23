@@ -221,6 +221,38 @@ def test_timeout_counts_as_busy(monkeypatch):
         asyncio.run(main._groq("m", "p"))
 
 
+INVALID_JSON = FakeResponse(400, text='{"error":{"code":"json_validate_failed"}}')
+VALID = FakeResponse(200, payload={"choices": [{"message": {"content": '{"ok": true}'}}]})
+
+
+def test_invalid_json_is_retried_once(monkeypatch):
+    responses = [INVALID_JSON, VALID]
+    async def post(*_a, **_k):
+        return responses.pop(0)
+    monkeypatch.setattr(main.httpx.AsyncClient, "post", post)
+    assert asyncio.run(main._groq("m", "p")) == {"ok": True}
+    assert responses == []
+
+
+def test_invalid_json_twice_moves_to_next_model(mocked_chain, monkeypatch):
+    """Two bad generations → give up on this model for this request (no cooldown) and try the next."""
+    calls, behaviour = mocked_chain
+    behaviour[PRIMARY] = main.httpx.HTTPStatusError("400 json_validate_failed", request=None, response=None)
+    assert asyncio.run(main.llm_json("p")) == {"from": BACKUP}
+    assert PRIMARY not in main._cooldown_until, "a bad generation is not a reason to bench the model"
+
+
+def test_invalid_json_retry_stops_after_two_attempts(monkeypatch):
+    sent = []
+    async def post(*_a, **_k):
+        sent.append(1)
+        return INVALID_JSON
+    monkeypatch.setattr(main.httpx.AsyncClient, "post", post)
+    with pytest.raises(main.httpx.HTTPStatusError):
+        asyncio.run(main._groq("m", "p"))
+    assert len(sent) == 2
+
+
 def test_groq_parses_json_content(monkeypatch):
     async def post(*_a, **_k):
         return FakeResponse(200, payload={"choices": [{"message": {"content": '{"name": "eta"}'}}]})
@@ -235,7 +267,11 @@ needs_groq = pytest.mark.skipif(not main.GROQ_KEY, reason="GROQ_API_KEY not set"
 @needs_groq
 @pytest.mark.parametrize("model", main.GROQ_MODELS)
 def test_groq_model_works(model):
-    assert asyncio.run(main._groq(model, 'Reply with JSON {"ok": true}')) == {"ok": True}
+    try:
+        out = asyncio.run(main._groq(model, 'Reply with JSON {"ok": true}'))
+    except main.ProviderBusy as e:
+        pytest.skip(f"{model} rate-limited by Groq ({e})")
+    assert out == {"ok": True}
 
 
 # ============================================================ live: LLM quality (per model)

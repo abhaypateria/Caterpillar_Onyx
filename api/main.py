@@ -228,16 +228,21 @@ _cooldown_until: dict[str, float] = {}
 
 
 async def _groq(model: str, prompt: str) -> dict:
-    try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            r = await c.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {GROQ_KEY}"},
-                json={"model": model, "temperature": 0.2, "response_format": {"type": "json_object"},
-                      "messages": [{"role": "user", "content": prompt}]},
-            )
-    except httpx.TimeoutException:  # a slow model must not stall every voice command
-        raise ProviderBusy(30, f"timeout {model}")
+    # JSON mode: Groq returns 400 json_validate_failed when the model emits invalid JSON
+    # (~1 in 12 Kannada summaries on gpt-oss-20b). Output is sampled, so one retry usually works.
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=10) as c:
+                r = await c.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {GROQ_KEY}"},
+                    json={"model": model, "temperature": 0.2, "response_format": {"type": "json_object"},
+                          "messages": [{"role": "user", "content": prompt}]},
+                )
+        except httpx.TimeoutException:  # a slow model must not stall every voice command
+            raise ProviderBusy(30, f"timeout {model}")
+        if not (r.status_code == 400 and "json_validate_failed" in r.text and attempt == 0):
+            break
     if r.status_code == 429:  # Groq says how long to wait
         try:
             wait = float(r.headers.get("retry-after", 60))
