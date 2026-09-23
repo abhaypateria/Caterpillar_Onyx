@@ -90,7 +90,7 @@ uvicorn main:app --reload --port 8000
 ## 6. Demo script (3 min, one operator's day)
 
 1. **Login** as Ravi (OP1001, Hindi) on EXC001.
-2. **Today** — "Agla kaam kya hai?" → the task card and the ETA with its reason ("+12 min: beginner").
+2. **Today** — "Agla kaam kya hai?" → the task card and the ETA with its reason ("Beginner operator +21 min", ETA 1h 20m vs 1h planned).
 3. **Safety** — engine on, belt off → spoken Hindi alert → escalates → incident logged automatically.
 4. **Replay** — the late truck at 09:05 → risk climbs → **warning at 09:10**, "Truck late, engine band karo, belt lagaye rakho" → the seatbelt came off at 09:30. *"Beeps react; Onyx predicts."* Then the backtest numbers.
 5. **Voice incident** — "Near miss log karo, ek aadmi machine ke peeche aa gaya" → structured report → becomes a lesson.
