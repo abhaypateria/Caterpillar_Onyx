@@ -16,7 +16,7 @@ async function post<T>(path: string, body: unknown): Promise<T | null> {
 export const api = {
   health: async () => { try { return (await fetch(BASE + '/health')).ok; } catch { return false; } },
 
-  /** Voice text → structured incident (Gemini). */
+  /** Voice text → structured incident (LLM, keyword fallback). */
   structureIncident: (text: string, lang: Lang) =>
     post<{ type: IncidentType; severity: Severity; description: string }>('/llm/incident', { text, lang }),
 

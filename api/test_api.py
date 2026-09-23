@@ -2,14 +2,12 @@
 
 Groups:
 - offline:  keys blanked, checks the template/keyword fallbacks the demo relies on.
-- chain:    provider order + fall-through, with providers mocked (no network, no quota).
-- live:     real calls using api/.env; skipped when a key is missing.
-            LLM quality tests run on Groq by default. Set TEST_GEMINI=1 to also run them
-            on Gemini (free tier = 20 requests/day per model, so this is opt-in).
+- chain:    Groq model order + fall-through, with the HTTP call mocked (no network, no quota).
+- live:     real calls using api/.env; skipped when a key is missing. LLM quality tests run
+            once per model in GROQ_MODELS, so the backup model is proven too.
 """
 import asyncio
 import base64
-import os
 import re
 
 import pytest
@@ -26,7 +24,6 @@ SEVERITIES = {"low", "medium", "high"}
 
 @pytest.fixture
 def offline(monkeypatch, tmp_path):
-    monkeypatch.setattr(main, "GEMINI_KEY", "")
     monkeypatch.setattr(main, "GROQ_KEY", "")
     monkeypatch.setattr(main, "SARVAM_KEY", "")
     monkeypatch.setattr(main, "DB", tmp_path / "test.db")
@@ -41,7 +38,7 @@ def fresh_cooldowns():
 
 # ============================================================ offline (fallbacks)
 def test_health_offline(offline):
-    assert client.get("/health").json() == {"ok": True, "gemini": False, "groq": False, "sarvam": False}
+    assert client.get("/health").json() == {"ok": True, "groq": False, "llm_models": [], "sarvam": False}
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -107,136 +104,148 @@ def test_incidents_resync_is_idempotent(offline):
     assert len(client.get("/incidents").json()) == 1
 
 
-# ============================================================ chain (mocked providers)
+# ============================================================ chain (mocked HTTP)
+PRIMARY, BACKUP = "model-a", "model-b"
+
+
 @pytest.fixture
 def mocked_chain(monkeypatch):
-    """Both keys 'set', providers replaced by fakes that record calls."""
-    monkeypatch.setattr(main, "GEMINI_KEY", "fake")
+    """Key 'set', two models, the Groq call replaced by a fake that records which model it hit."""
     monkeypatch.setattr(main, "GROQ_KEY", "fake")
+    monkeypatch.setattr(main, "GROQ_MODELS", [PRIMARY, BACKUP])
     calls: list[str] = []
     behaviour: dict[str, object] = {}  # model → exception to raise, or dict to return
 
-    async def fake_gemini(model, prompt):
-        calls.append(f"gemini:{model}")
-        b = behaviour.get(model, main.ProviderBusy(3600, "429"))
+    async def fake_groq(model, prompt):
+        calls.append(model)
+        b = behaviour.get(model, {"from": model})
         if isinstance(b, Exception):
             raise b
         return b
 
-    async def fake_groq(prompt):
-        calls.append("groq")
-        b = behaviour.get("groq", {"from": "groq"})
-        if isinstance(b, Exception):
-            raise b
-        return b
-
-    monkeypatch.setattr(main, "_gemini", fake_gemini)
     monkeypatch.setattr(main, "_groq", fake_groq)
     return calls, behaviour
 
 
-def gemini_chain():
-    return list(dict.fromkeys([main.GEMINI_MODEL, *main.GEMINI_FALLBACK_MODELS]))
-
-
-def test_chain_uses_first_gemini_model_when_healthy(mocked_chain):
-    calls, behaviour = mocked_chain
-    behaviour[main.GEMINI_MODEL] = {"from": "primary"}
-    assert asyncio.run(main.llm_json("p")) == {"from": "primary"}
-    assert calls == [f"gemini:{main.GEMINI_MODEL}"]
-
-
-def test_chain_moves_to_next_gemini_model_on_quota(mocked_chain):
-    calls, behaviour = mocked_chain
-    second = gemini_chain()[1]
-    behaviour[second] = {"from": "second"}
-    assert asyncio.run(main.llm_json("p")) == {"from": "second"}
-    assert calls == [f"gemini:{main.GEMINI_MODEL}", f"gemini:{second}"]
-
-
-def test_chain_falls_through_to_groq_when_all_gemini_busy(mocked_chain):
+def test_chain_uses_primary_model_when_healthy(mocked_chain):
     calls, _ = mocked_chain
-    assert asyncio.run(main.llm_json("p")) == {"from": "groq"}
-    assert calls == [f"gemini:{m}" for m in gemini_chain()] + ["groq"]
+    assert asyncio.run(main.llm_json("p")) == {"from": PRIMARY}
+    assert calls == [PRIMARY]
 
 
-def test_chain_skips_rate_limited_models_on_next_call(mocked_chain):
-    calls, _ = mocked_chain
+def test_chain_moves_to_backup_on_rate_limit(mocked_chain):
+    calls, behaviour = mocked_chain
+    behaviour[PRIMARY] = main.ProviderBusy(60, "429")
+    assert asyncio.run(main.llm_json("p")) == {"from": BACKUP}
+    assert calls == [PRIMARY, BACKUP]
+
+
+def test_chain_skips_rate_limited_model_on_next_call(mocked_chain):
+    calls, behaviour = mocked_chain
+    behaviour[PRIMARY] = main.ProviderBusy(60, "429")
     asyncio.run(main.llm_json("p"))
     calls.clear()
     asyncio.run(main.llm_json("p"))
-    assert calls == ["groq"], "exhausted Gemini models should be on cooldown"
+    assert calls == [BACKUP], "rate-limited model should be on cooldown"
+
+
+def test_chain_retries_model_after_cooldown(mocked_chain):
+    calls, behaviour = mocked_chain
+    behaviour[PRIMARY] = main.ProviderBusy(0, "429")  # zero cooldown → eligible again immediately
+    asyncio.run(main.llm_json("p"))
+    del behaviour[PRIMARY]
+    calls.clear()
+    assert asyncio.run(main.llm_json("p")) == {"from": PRIMARY}
 
 
 def test_chain_survives_bad_json_and_errors(mocked_chain):
-    calls, behaviour = mocked_chain
-    behaviour[main.GEMINI_MODEL] = ValueError("not json")
-    behaviour[gemini_chain()[1]] = {"from": "second"}
-    assert asyncio.run(main.llm_json("p")) == {"from": "second"}
+    _, behaviour = mocked_chain
+    behaviour[PRIMARY] = ValueError("not json")
+    assert asyncio.run(main.llm_json("p")) == {"from": BACKUP}
 
 
 def test_chain_returns_none_when_everything_fails(mocked_chain):
     _, behaviour = mocked_chain
-    behaviour["groq"] = main.ProviderBusy(60, "429")
+    behaviour[PRIMARY] = behaviour[BACKUP] = main.ProviderBusy(60, "429")
     assert asyncio.run(main.llm_json("p")) is None
 
 
 def test_endpoint_uses_template_when_chain_fails(mocked_chain):
     _, behaviour = mocked_chain
-    behaviour["groq"] = main.ProviderBusy(60, "429")
+    behaviour[PRIMARY] = behaviour[BACKUP] = main.ProviderBusy(60, "503")
     les = client.post("/llm/lesson", json={"incident": {"type": "seatbelt"}, "lang": "hi"}).json()
     assert les == main.LESSON_TEMPLATES["seatbelt"]
 
 
-@pytest.mark.parametrize("call", [lambda: main._gemini("any-model", "p"), lambda: main._groq("p")])
-def test_timeout_counts_as_busy(monkeypatch, call):
-    """A hung provider must be put on cooldown, not retried on every voice command."""
+def test_no_key_means_no_llm_calls(mocked_chain, monkeypatch):
+    calls, _ = mocked_chain
+    monkeypatch.setattr(main, "GROQ_KEY", "")
+    assert asyncio.run(main.llm_json("p")) is None
+    assert calls == []
+
+
+class FakeResponse:
+    def __init__(self, status, text="", headers=None, payload=None):
+        self.status_code, self.text, self.headers, self._payload = status, text, headers or {}, payload
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise main.httpx.HTTPStatusError("err", request=None, response=None)
+
+
+@pytest.mark.parametrize("response,cooldown", [
+    (FakeResponse(429, headers={"retry-after": "7"}), 7),        # Groq's own wait time is honoured
+    (FakeResponse(429), 60),                                     # no header → a minute
+    (FakeResponse(503), 30),                                     # overloaded
+    (FakeResponse(404), 3600),                                   # model retired
+    (FakeResponse(400, text='{"error":{"code":"model_decommissioned"}}'), 3600),
+])
+def test_groq_errors_map_to_cooldowns(monkeypatch, response, cooldown):
+    async def post(*_a, **_k):
+        return response
+    monkeypatch.setattr(main.httpx.AsyncClient, "post", post)
+    with pytest.raises(main.ProviderBusy) as e:
+        asyncio.run(main._groq("m", "p"))
+    assert e.value.cooldown == cooldown
+
+
+def test_timeout_counts_as_busy(monkeypatch):
+    """A hung model must be put on cooldown, not retried on every voice command."""
     async def hang(*_a, **_k):
         raise main.httpx.ReadTimeout("slow")
     monkeypatch.setattr(main.httpx.AsyncClient, "post", hang)
     with pytest.raises(main.ProviderBusy):
-        asyncio.run(call())
+        asyncio.run(main._groq("m", "p"))
 
 
-def test_groq_only_when_no_gemini_key(mocked_chain, monkeypatch):
-    calls, _ = mocked_chain
-    monkeypatch.setattr(main, "GEMINI_KEY", "")
-    assert asyncio.run(main.llm_json("p")) == {"from": "groq"}
-    assert calls == ["groq"]
+def test_groq_parses_json_content(monkeypatch):
+    async def post(*_a, **_k):
+        return FakeResponse(200, payload={"choices": [{"message": {"content": '{"name": "eta"}'}}]})
+    monkeypatch.setattr(main.httpx.AsyncClient, "post", post)
+    assert asyncio.run(main._groq("m", "p")) == {"name": "eta"}
 
 
-# ============================================================ live: keys
-@pytest.mark.skipif(not main.GEMINI_KEY, reason="GEMINI_API_KEY not set")
-def test_gemini_key_works():
-    """At least one Gemini model in the chain answers (1 request)."""
-    reasons = []
-    for m in gemini_chain():
-        try:
-            assert asyncio.run(main._gemini(m, 'Reply with JSON {"ok": true}')) == {"ok": True}
-            return
-        except main.ProviderBusy as e:
-            reasons.append(str(e))
-    pytest.fail(f"every Gemini model busy/over quota: {reasons}")
+# ============================================================ live: key + every model answers
+needs_groq = pytest.mark.skipif(not main.GROQ_KEY, reason="GROQ_API_KEY not set")
 
 
-@pytest.mark.skipif(not main.GROQ_KEY, reason="GROQ_API_KEY not set")
-def test_groq_key_works():
-    assert asyncio.run(main._groq('Reply with JSON {"ok": true}')) == {"ok": True}
+@needs_groq
+@pytest.mark.parametrize("model", main.GROQ_MODELS)
+def test_groq_model_works(model):
+    assert asyncio.run(main._groq(model, 'Reply with JSON {"ok": true}')) == {"ok": True}
 
 
-# ============================================================ live: LLM quality
-LIVE = (["groq"] if main.GROQ_KEY else []) + (["gemini"] if main.GEMINI_KEY and os.getenv("TEST_GEMINI") else [])
-
-
-@pytest.fixture(params=LIVE or [pytest.param(None, marks=pytest.mark.skip(reason="no LLM key (or TEST_GEMINI unset)"))])
+# ============================================================ live: LLM quality (per model)
+@pytest.fixture(params=main.GROQ_MODELS if main.GROQ_KEY else [pytest.param(None, marks=pytest.mark.skip(reason="GROQ_API_KEY not set"))])
 def llm(request, monkeypatch, tmp_path):
-    """Force one provider and record whether the answer really came from the LLM."""
-    if request.param == "groq":
-        monkeypatch.setattr(main, "GEMINI_KEY", "")
-    else:
-        monkeypatch.setattr(main, "GROQ_KEY", "")
+    """Pin the chain to one model and record whether the answer really came from the LLM."""
+    monkeypatch.setattr(main, "GROQ_MODELS", [request.param])
     monkeypatch.setattr(main, "DB", tmp_path / "test.db")
-    answers: list = []
+    answers = Answers()
+    answers.model = request.param
     real = main.llm_json
 
     async def recording(prompt):
@@ -248,7 +257,16 @@ def llm(request, monkeypatch, tmp_path):
     return answers
 
 
+class Answers(list):
+    model = ""
+
+
 def from_llm(answers):
+    """The endpoint's answer must come from the LLM, not the offline template.
+    A model on cooldown was rate-limited by Groq: that's quota, not quality, so skip rather than fail.
+    Bad JSON or other errors don't set a cooldown, so they still fail."""
+    if answers and answers[-1] is None and answers.model in main._cooldown_until:
+        pytest.skip(f"{answers.model} rate-limited by Groq")
     assert answers and answers[-1] is not None, "LLM gave no answer — endpoint used the offline fallback"
 
 
