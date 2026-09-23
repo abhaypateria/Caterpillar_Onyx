@@ -1,0 +1,28 @@
+{
+  "app": { "name": "Onyx", "tagline": "The operator's copilot" },
+  "nav": { "dashboard": "Today", "safety": "Safety", "training": "Training", "insights": "Insights", "replay": "Replay", "supervisor": "Supervisor", "summary": "Shift" },
+  "login": { "title": "Who is operating?", "machine": "Machine", "start": "Start shift", "language": "Language" },
+  "dashboard": { "currentTask": "Current task", "upNext": "Up next", "eta": "ETA", "planned": "Planned", "range": "Range", "why": "Why?", "start": "Start", "done": "Done", "cycle": "+1 cycle", "noTasks": "No tasks scheduled" },
+  "status": { "scheduled": "Scheduled", "active": "In progress", "done": "Done" },
+  "factor": { "Beginner": "Beginner operator", "Intermediate": "Intermediate operator", "Cloudy": "Cloudy", "Windy": "Windy", "Rainy": "Rain", "machineAge": "Machine age {{years}} yrs" },
+  "state": { "Productive": "Productive", "Waiting": "Waiting", "Disengaged": "Disengaged", "Fatigued": "Fatigued" },
+  "safety": { "seatbelt": "Seatbelt", "fastened": "Fastened", "unfastened": "Unfastened", "engine": "Engine", "on": "On", "off": "Off", "proximity": "Proximity", "clear": "Clear", "conditions": "Conditions", "breakIn": "Break in {{min}} min", "breakNow": "Take a break now", "risk15": "Risk next 15 min" },
+  "alert": {
+    "seatbelt": "Fasten your seatbelt.",
+    "seatbeltSupervisor": "Seatbelt still unfastened. Supervisor notified.",
+    "proximityStop": "STOP. Person {{dist}} metres {{dir}}.",
+    "proximityWarn": "Person nearby, {{dist}} metres {{dir}}.",
+    "riskRising": "Unsafe moment likely soon."
+  },
+  "nudge": {
+    "truckDelay": "Truck is {{min}} minutes late. Switch the engine off and stay belted.",
+    "dispatcherResequence": "{{machine}} is waiting on trucks. Re-sequence haul trucks.",
+    "breakNow": "Heat and long shift. Take a water break now.",
+    "weatherCaution": "Rain or wind ahead. Be careful on the next task.",
+    "swapTaskOrder": "Weather risk: consider swapping task order.",
+    "idleUnexplained": "Machine idling for {{min}} minutes. Switch off if waiting."
+  },
+  "incident": { "title": "Report incident", "types": { "near_miss": "Near miss", "seatbelt": "Seatbelt", "proximity": "Proximity", "damage": "Damage", "injury": "Injury", "other": "Other" }, "describe": "What happened?", "save": "Log incident", "logged": "Incident logged", "auto": "Auto" },
+  "voice": { "listening": "Listening…", "tap": "Tap to speak", "confirm": "Say confirm or cancel", "didntCatch": "Sorry, I didn't catch that." },
+  "common": { "confirm": "Confirm", "cancel": "Cancel", "minutes": "min", "simulated": "Simulated replay built from the real 2-hourly rows" }
+}

@@ -1,0 +1,15 @@
+.top { display: flex; gap: 12px; align-items: center; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+.brand { color: var(--cat); font-size: 30px; }
+.spacer { flex: 1; }
+.nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.nav a { color: var(--muted); text-decoration: none; padding: 12px 16px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+.nav a.active { color: #111; background: var(--cat); }
+.alertbar { padding: 14px 16px; font-weight: 800; font-size: 18px; display: flex; gap: 12px; align-items: center; }
+.alertbar.critical { background: var(--stop); color: #fff; animation: flash 0.8s infinite alternate; }
+.alertbar.warning { background: var(--warn); color: #111; }
+.alertbar.info { background: var(--surface-2); }
+@keyframes flash { to { opacity: .8; } }
+.voicebtn { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 76px; height: 76px; border-radius: 50%; font-size: 30px; box-shadow: 0 6px 24px #0008; }
+.voicebtn.on { animation: pulse 1s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--cat) 25%, transparent); } }
+.voicetext { position: fixed; right: 108px; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); max-width: min(420px, 70vw); }

@@ -1,0 +1,28 @@
+{
+  "app": { "name": "Onyx", "tagline": "ऑपरेटर का साथी" },
+  "nav": { "dashboard": "आज", "safety": "सुरक्षा", "training": "ट्रेनिंग", "insights": "जानकारी", "replay": "रीप्ले", "supervisor": "सुपरवाइज़र", "summary": "शिफ्ट" },
+  "login": { "title": "कौन चला रहा है?", "machine": "मशीन", "start": "शिफ्ट शुरू करें", "language": "भाषा" },
+  "dashboard": { "currentTask": "अभी का काम", "upNext": "अगला काम", "eta": "पूरा होने का समय", "planned": "योजना", "range": "सीमा", "why": "क्यों?", "start": "शुरू", "done": "हो गया", "cycle": "+1 साइकिल", "noTasks": "कोई काम नहीं" },
+  "status": { "scheduled": "तय", "active": "चल रहा है", "done": "पूरा" },
+  "factor": { "Beginner": "नया ऑपरेटर", "Intermediate": "मध्यम अनुभव", "Cloudy": "बादल", "Windy": "तेज़ हवा", "Rainy": "बारिश", "machineAge": "मशीन {{years}} साल पुरानी" },
+  "state": { "Productive": "काम चालू", "Waiting": "इंतज़ार", "Disengaged": "ध्यान हटा", "Fatigued": "थकान" },
+  "safety": { "seatbelt": "सीटबेल्ट", "fastened": "लगी है", "unfastened": "खुली है", "engine": "इंजन", "on": "चालू", "off": "बंद", "proximity": "आसपास", "clear": "साफ़", "conditions": "मौसम / हालात", "breakIn": "{{min}} मिनट में ब्रेक", "breakNow": "अभी ब्रेक लें", "risk15": "अगले 15 मिनट का खतरा" },
+  "alert": {
+    "seatbelt": "सीटबेल्ट लगाइए।",
+    "seatbeltSupervisor": "सीटबेल्ट अब भी खुली है। सुपरवाइज़र को बताया गया।",
+    "proximityStop": "रुकिए! {{dir}} {{dist}} मीटर पर कोई है।",
+    "proximityWarn": "{{dir}} {{dist}} मीटर पर कोई है।",
+    "riskRising": "जल्द ही खतरे की संभावना है।"
+  },
+  "nudge": {
+    "truckDelay": "ट्रक {{min}} मिनट लेट है — इंजन बंद करो, बेल्ट लगाए रखो।",
+    "dispatcherResequence": "{{machine}} ट्रक का इंतज़ार कर रही है। ट्रकों का क्रम बदलें।",
+    "breakNow": "गर्मी और लंबी शिफ्ट। अभी पानी का ब्रेक लें।",
+    "weatherCaution": "बारिश या हवा। अगले काम में सावधानी रखें।",
+    "swapTaskOrder": "मौसम का खतरा: काम का क्रम बदलें।",
+    "idleUnexplained": "मशीन {{min}} मिनट से खाली चल रही है। इंतज़ार है तो बंद करें।"
+  },
+  "incident": { "title": "घटना दर्ज करें", "types": { "near_miss": "बाल-बाल बचे", "seatbelt": "सीटबेल्ट", "proximity": "पास में व्यक्ति", "damage": "नुकसान", "injury": "चोट", "other": "अन्य" }, "describe": "क्या हुआ?", "save": "दर्ज करें", "logged": "घटना दर्ज हो गई", "auto": "ऑटो" },
+  "voice": { "listening": "सुन रहा हूँ…", "tap": "बोलने के लिए दबाएँ", "confirm": "कन्फर्म या कैंसल बोलें", "didntCatch": "माफ़ कीजिए, समझ नहीं आया।" },
+  "common": { "confirm": "कन्फर्म", "cancel": "कैंसल", "minutes": "मिनट", "simulated": "असली 2-घंटे के डेटा से बना सिम्युलेटेड रीप्ले" }
+}
