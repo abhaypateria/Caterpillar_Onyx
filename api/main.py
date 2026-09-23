@@ -6,7 +6,9 @@ Every endpoint must work without API keys (template fallback) so the demo never 
 """
 import json
 import os
+import re
 import sqlite3
+import time
 from pathlib import Path
 
 import httpx
@@ -16,33 +18,55 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).parent / ".env")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GROQ_KEY = os.getenv("GROQ_API_KEY", "")
+# Tried in order. Rate limits are per model (free tier: 1000 req/day, 8000 tokens/min each),
+# so later models cover earlier ones being rate-limited or retired. qwen is last: it also has a
+# 1000 output-tokens/min cap (~3 lessons/min), but it's a different model family.
+GROQ_MODELS = [m.strip() for m in os.getenv(
+    "GROQ_MODELS", "openai/gpt-oss-120b,openai/gpt-oss-20b,qwen/qwen3.8-27b").split(",") if m.strip()]
 SARVAM_KEY = os.getenv("SARVAM_API_KEY", "")
+SARVAM_STT_MODEL = "saarika:v2.5"
+SARVAM_SPEAKER = "priya"
 DB = Path(__file__).parent / "onyx.db"
 
 app = FastAPI(title="Onyx API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 LANG_NAME = {"en": "English", "hi": "Hindi", "ta": "Tamil", "kn": "Kannada"}
+# Name the script explicitly: models otherwise drift into romanised Hindi, which TTS voices read badly.
+LANG_SCRIPT = {"en": "English", "hi": "Hindi written in Devanagari script", "ta": "Tamil written in Tamil script",
+               "kn": "Kannada written in Kannada script"}
 
 # Keyword rules for the offline incident classifier (order = priority; first hit wins).
 INCIDENT_RULES: list[tuple[str, str, list[str]]] = [
     # (type, severity, keywords across en / hi-latin / common code-mix)
     ("injury", "high", ["injur", "hurt", "bleed", "chot", "ghayal", "khoon"]),
-    ("proximity", "high", ["person", "people", "worker", "aadmi", "aadami", "insaan", "peeche", "behind", "near", "paas", "reversing", "blind"]),
+    # No bare "near" here: it would swallow "near miss".
+    ("proximity", "high", ["person", "people", "worker", "someone", "helper", "aadmi", "aadami", "insaan", "peeche",
+                           "behind", "paas", "reversing", "blind", "near the machine", "near me"]),
     ("seatbelt", "medium", ["seatbelt", "belt", "seat belt", "belt nahi", "belt khul"]),
     ("damage", "medium", ["damage", "hit", "broke", "broken", "tuut", "toot", "takra", "dent", "bucket"]),
-    ("near_miss", "medium", ["near miss", "near-miss", "almost", "bach gaya", "baal baal", "close call"]),
 ]
+NEAR_MISS_WORDS = ["near miss", "near-miss", "almost", "nearly", "bach gaya", "baal baal", "close call"]
+# "No one was hurt" / "chot nahi lagi" must not count as an injury.
+NO_HARM = re.compile(
+    r"\b(no ?one|nobody|none of us)\s+(was\s+|got\s+|is\s+)?(hurt|injured)"
+    r"|\b(was\s*n[o']?t|not)\s+(hurt|injured)"
+    r"|\b(kisi ko |koi )?chot nahi( lagi| aayi)?"
+)
 
 
 def classify_incident(text: str) -> dict:
-    """Deterministic fallback when Gemini is unavailable. Never raises."""
-    t = text.lower()
+    """Deterministic fallback when no LLM is available. Never raises."""
+    t = NO_HARM.sub(" ", text.lower())
+    near_miss = any(k in t for k in NEAR_MISS_WORDS)
     for kind, severity, keys in INCIDENT_RULES:
+        if near_miss and kind == "damage":
+            continue  # "almost hit the wall" — nothing was actually damaged
         if any(k in t for k in keys):
             return {"type": kind, "severity": severity, "description": text.strip() or kind}
+    if near_miss:
+        return {"type": "near_miss", "severity": "medium", "description": text.strip()}
     return {"type": "other", "severity": "low", "description": text.strip() or "Unspecified incident"}
 
 
@@ -140,7 +164,7 @@ def template_lesson(incident: dict) -> dict:
 
 
 def template_summary(facts: dict, audience: str) -> str:
-    """Readable spoken summary from shift facts when Gemini is unavailable."""
+    """Readable spoken summary from shift facts when no LLM is available."""
     tasks = facts.get("tasksDone")
     total = facts.get("tasksTotal")
     idle = facts.get("idleMin")
@@ -170,7 +194,7 @@ def db():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "gemini": bool(GEMINI_KEY), "sarvam": bool(SARVAM_KEY)}
+    return {"ok": True, "groq": bool(GROQ_KEY), "llm_models": GROQ_MODELS if GROQ_KEY else [], "sarvam": bool(SARVAM_KEY)}
 
 
 class IncidentBatch(BaseModel):
@@ -191,21 +215,70 @@ def list_incidents():
         return [json.loads(r[0]) for r in con.execute("select data from incidents order by at desc")]
 
 
-# ---------------------------------------------------------------- LLM (Gemini)
-async def gemini_json(prompt: str) -> dict | None:
-    """Call Gemini and parse a JSON reply. Returns None on any failure so callers can fall back."""
-    if not GEMINI_KEY:
-        return None
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-    body = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
-    try:
-        async with httpx.AsyncClient(timeout=15) as c:
-            r = await c.post(url, headers={"x-goog-api-key": GEMINI_KEY}, json=body)
-            r.raise_for_status()
-            return json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"])
-    except Exception as e:  # noqa: BLE001 — demo must never crash
-        print("gemini error:", e)
-        return None
+# ---------------------------------------------------------------- LLM (Groq models in order)
+class ProviderBusy(Exception):
+    """Rate-limited, overloaded, retired or slow: skip this model for `cooldown` seconds."""
+
+    def __init__(self, cooldown: float, why: str):
+        super().__init__(why)
+        self.cooldown = cooldown
+
+
+_cooldown_until: dict[str, float] = {}
+
+
+async def _groq(model: str, prompt: str) -> dict:
+    # JSON mode: Groq returns 400 json_validate_failed when the model emits invalid JSON
+    # (~1 in 12 Kannada summaries on gpt-oss-20b). Output is sampled, so one retry usually works.
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=10) as c:
+                r = await c.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {GROQ_KEY}"},
+                    json={"model": model, "temperature": 0.2, "response_format": {"type": "json_object"},
+                          "messages": [{"role": "user", "content": prompt}]},
+                )
+        except httpx.TimeoutException:  # a slow model must not stall every voice command
+            raise ProviderBusy(30, f"timeout {model}")
+        if not (r.status_code == 400 and "json_validate_failed" in r.text and attempt == 0):
+            break
+    if r.status_code == 429:  # Groq says how long to wait
+        try:
+            wait = float(r.headers.get("retry-after", 60))
+        except ValueError:
+            wait = 60
+        raise ProviderBusy(wait, f"429 {model}")
+    if r.status_code in (500, 502, 503):
+        raise ProviderBusy(30, f"{r.status_code} {model}")
+    if r.status_code == 404 or "decommissioned" in r.text:
+        raise ProviderBusy(3600, f"retired {model}")
+    r.raise_for_status()
+    return json.loads(r.json()["choices"][0]["message"]["content"])
+
+
+def llm_providers() -> list[tuple[str, object]]:
+    """Ordered chain of Groq models; each has its own rate limits."""
+    if not GROQ_KEY:
+        return []
+    return [(m, lambda p, m=m: _groq(m, p)) for m in dict.fromkeys(GROQ_MODELS)]
+
+
+async def llm_json(prompt: str) -> dict | None:
+    """First provider that returns valid JSON wins. None → caller uses its template fallback."""
+    for name, call in llm_providers():
+        if _cooldown_until.get(name, 0) > time.monotonic():
+            continue
+        try:
+            out = await call(prompt)
+            if isinstance(out, dict):
+                return out
+        except ProviderBusy as e:
+            _cooldown_until[name] = time.monotonic() + e.cooldown
+            print(f"llm {name} busy ({e}), skipping for {e.cooldown:.0f}s")
+        except Exception as e:  # noqa: BLE001 — demo must never crash
+            print(f"llm {name} error:", e)
+    return None
 
 
 class TextIn(BaseModel):
@@ -215,11 +288,19 @@ class TextIn(BaseModel):
 
 @app.post("/llm/incident")
 async def structure_incident(body: TextIn):
-    out = await gemini_json(
+    out = await llm_json(
         "An excavator operator reported a site incident by voice (may be code-mixed Hindi/Tamil/Kannada/English).\n"
         f'Transcript: "{body.text}"\n'
-        'Return JSON {"type": one of near_miss|seatbelt|proximity|damage|injury|other, '
-        '"severity": low|medium|high, "description": one clear English sentence}.'
+        "Types (pick the most specific):\n"
+        "- injury: someone was actually hurt.\n"
+        "- proximity: a person or vehicle got inside the machine's working/swing zone or behind it, "
+        "even if the operator calls it a near miss.\n"
+        "- seatbelt: operating without the seatbelt fastened.\n"
+        "- damage: the machine actually hit and damaged something.\n"
+        "- near_miss: a close call with no person in the zone and nothing damaged.\n"
+        "- other: anything else.\n"
+        "Severity: high = a person was in danger or hurt; medium = equipment/property at risk; low = minor.\n"
+        'Return JSON {"type": ..., "severity": ..., "description": one clear English sentence}.'
     )
     if out and out.get("type"):
         return out
@@ -228,7 +309,7 @@ async def structure_incident(body: TextIn):
 
 @app.post("/llm/intent")
 async def intent(body: TextIn):
-    out = await gemini_json(
+    out = await llm_json(
         f'Operator said: "{body.text}". Map to one intent: next_task, task_done, eta, why_late, '
         'report_incident, start_lesson, shift_summary, mayday, confirm, cancel, unknown. Return JSON {"name": ...}.'
     )
@@ -243,8 +324,8 @@ class SummaryIn(BaseModel):
 
 @app.post("/llm/summary")
 async def summary(body: SummaryIn):
-    out = await gemini_json(
-        f"Write a short spoken shift summary for the {body.audience} in {LANG_NAME.get(body.lang, 'English')}. "
+    out = await llm_json(
+        f"Write a short spoken shift summary for the {body.audience} in {LANG_SCRIPT.get(body.lang, 'English')}. "
         "Max 3 sentences, plain words, keep technical terms in English. One thing that went well, one to improve. "
         f'Facts: {json.dumps(body.facts)}. Return JSON {{"text": ...}}.'
     )
@@ -260,9 +341,9 @@ class LessonIn(BaseModel):
 
 @app.post("/llm/lesson")
 async def lesson(body: LessonIn):
-    out = await gemini_json(
+    out = await llm_json(
         f"Turn this real site incident into a 2-minute safety micro-lesson for an excavator operator in "
-        f"{LANG_NAME.get(body.lang, 'English')}. Incident: {json.dumps(body.incident)}. "
+        f"{LANG_SCRIPT.get(body.lang, 'English')}. Incident: {json.dumps(body.incident)}. "
         'Return JSON {"title": str, "steps": [3-4 short sentences], "quiz": [{"q": str, "options": [3 str], "answer": index}]}.'
     )
     if out and out.get("steps"):
@@ -292,7 +373,7 @@ async def stt(body: AudioIn):
             r = await c.post(
                 "https://api.sarvam.ai/speech-to-text",
                 headers={"api-subscription-key": SARVAM_KEY},
-                data={"language_code": lang, "model": "saarika:v2"},
+                data={"language_code": lang, "model": SARVAM_STT_MODEL},
                 files={"file": ("audio.wav", audio, "audio/wav")},
             )
             r.raise_for_status()
@@ -313,7 +394,7 @@ async def tts(body: TextIn):
             r = await c.post(
                 "https://api.sarvam.ai/text-to-speech",
                 headers={"api-subscription-key": SARVAM_KEY},
-                json={"inputs": [body.text[:500]], "target_language_code": lang, "speaker": "meera"},
+                json={"inputs": [body.text[:500]], "target_language_code": lang, "speaker": SARVAM_SPEAKER},
             )
             r.raise_for_status()
             audios = r.json().get("audios", [])

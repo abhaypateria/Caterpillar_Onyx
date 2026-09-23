@@ -78,7 +78,7 @@ uvicorn main:app --reload --port 8000
 
 | Time | Checkpoint | Person A | Person B |
 |---|---|---|---|
-| **22:30–01:00** | **CP1 merge 01:00** | **Today** screen: current task card, ETA + range + "why", Start / +1 cycle / Done with live ETA, today's list. **Safety**: engine/belt toggles → escalation, auto-incident, alert banner, spoken alerts | **API**: add keys, check Gemini works, write template fallbacks. **Voice**: route every intent in `VoiceButton` (next task, done + confirm, ETA, why, incident, mayday). Test hi/ta/kn recognition on the demo phone and note the results |
+| **22:30–01:00** | **CP1 merge 01:00** | **Today** screen: current task card, ETA + range + "why", Start / +1 cycle / Done with live ETA, today's list. **Safety**: engine/belt toggles → escalation, auto-incident, alert banner, spoken alerts | **API**: add keys, check Groq works, write template fallbacks. **Voice**: route every intent in `VoiceButton` (next task, done + confirm, ETA, why, incident, mayday). Test hi/ta/kn recognition on the demo phone and note the results |
 | **01:00–03:30** | **CP2 merge 03:30** | **Replay**: play DEMO_DAY, risk gauge, state bars, root cause, spoken nudge, the 09:10 → 09:30 reveal, backtest table. **Safety**: webcam person detection (COCO-SSD) + radar + widened distances, conditions from Open-Meteo, heat/break timer | **Voice incident**: speech → `api.structureIncident` → `addIncident` → sync. **Training**: lesson list, player (`speak`), quiz, recommendations, near-miss → lesson. **Translations**: fill `ta.json` and `kn.json` (have a native speaker check the safety lines) |
 | **03:30–05:00** | **CP3 feature freeze 05:00** | **Insights**: findings table, idle vs 25% target, idle ₹/L/CO₂, fuel-mismatch "for review", operator profile | **Shift summary**: facts → `api.summary`, spoken, plus a WhatsApp `wa.me` link. **Supervisor**: fleet status, incident list + timeline, dispatcher nudges. Sarvam STT if time allows |
 | **05:00–06:30** | Polish | Bug fixes, phone/tablet layout, sunlight contrast | Bug fixes, full voice run-through in Hindi |
@@ -101,7 +101,7 @@ uvicorn main:app --reload --port 8000
 
 | Endpoint | In | Out | Fallback |
 |---|---|---|---|
-| `GET /health` | — | `{ok, gemini, sarvam}` | — |
+| `GET /health` | — | `{ok, groq, llm_models, sarvam}` | — |
 | `POST /llm/incident` | `{text, lang}` | `{type, severity, description}` | keyword rules |
 | `POST /llm/intent` | `{text, lang}` | `{name}` | `unknown` |
 | `POST /llm/summary` | `{facts, lang, audience}` | `{text}` | template |
@@ -110,4 +110,4 @@ uvicorn main:app --reload --port 8000
 | `POST /speech/tts` | `{text, lang}` | `{audio(base64)}` | browser speechSynthesis |
 | `POST /incidents` · `GET /incidents` | `{incidents[]}` | `{saved[]}` · list | local store |
 
-**Keys** (in `api/.env`): `GEMINI_API_KEY` from Google AI Studio; `SARVAM_API_KEY` from the Sarvam dashboard.
+**Keys** (in `api/.env`, see `api/.env.example`): `GROQ_API_KEY` from console.groq.com; `SARVAM_API_KEY` from the Sarvam dashboard. The LLM is Groq only (Gemini was dropped: free tier is 20 requests/day and was often overloaded).
