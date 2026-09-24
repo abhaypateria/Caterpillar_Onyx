@@ -267,11 +267,32 @@ expected fuel   = idle min/60 × 3.5 L/h  +  cycles × 0.45 L  +  working min/60
 
 **Idle cost:** idle minutes/60 × 3.5 L/h, × ₹90/L, and × 2.68 kg CO₂/L. The real rows (160 min) give **9.3 L, ₹840, 25 kg CO₂**. The benchmarks are the industry average of ~39% idle and a good-fleet target of 25%.
 
+**Worked example: the organisers' 4 readings (EXC001 / OP1001) plus one labelled synthetic row**
+
+| Reading | Engine hrs | Running | Idle | Idle share | Fuel | Expected | Fuel/cycle | Flags |
+|---|---|---|---|---|---|---|---|---|
+| 05-01 08:00 | 1523.5 | – (first) | 30 | – | 5.2 | – | 0.43 | Normal |
+| 05-01 10:00 | 1524.8 | 78 min | 55 | 70.5% | 3.8 | 4.3 | 1.90 | Long idle, High fuel/cycle, Seatbelt off |
+| 05-01 14:00 | 1526.5 | 102 min | 15 | 14.7% | 6.1 | 6.1 | 0.61 | Normal |
+| 05-02 09:00 | 1530.2 | 222 min | 60 | 27.0% | 2.0 | 5.3 | 2.00 | Long idle, High fuel/cycle, Seatbelt off |
+| 05-02 11:00 *(synthetic)* | 1532.2 | 120 min | 20 | 16.7% | 9.0 | 3.8 | 2.25 | High fuel/cycle, **Fuel above expected** |
+
+- **Expected fuel for 10:00:** 55/60 × 3.5 + 2 × 0.45 + 23/60 × 0.5 = 3.21 + 0.90 + 0.19 = **4.3 L**.
+- **Fleet averages for the outlier check:** idle 40 min (standard deviation 18.4), fuel/cycle 1.24 L (0.72). The highest reading is 1.4 standard deviations, so the outlier check can't fire on 4 readings.
+- **Idle share chart:** 71% / 15% / 27% against the 25% target and the 39% industry average. The real average is **37.4%**.
+
+**Known limits:**
+- The next-day reading counts 3.7 h of running time from the overnight engine-hours gap.
+- Only over-consumption is flagged.
+- The benchmarks (3.5 L/h, ₹90/L, 0.45 L per cycle, 25% target) are public-source assumptions, configurable per site.
+
 **Operator profile** (coaching, not punishment):
 - **Safety:** % of readings with the belt fastened.
 - **Idle discipline:** 100 − 2 × (idle share − 25%).
 - **Productivity:** cycles per hour ÷ 10.
 - **Fuel efficiency:** 0.6 L ÷ average fuel per cycle.
+
+For Ravi: Safety 2/4 = **50** · Idle discipline 100 − 2 × 12.4 = **75** · Productivity (1.54 + 5.88 + 0.27) ÷ 3 = 2.56 cycles/h → **26** · Fuel efficiency 0.6 ÷ 1.24 → **49**.
 
 ---
 
