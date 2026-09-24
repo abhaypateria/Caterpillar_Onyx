@@ -158,9 +158,9 @@ export default function VoiceButton() {
     if (phase === 'thinking') return;
     stopSpeaking(); // don't talk over the operator
     setPhase('listening');
-    setHeard(t('voice.listening'));
+    setHeard('…'); // mic opening: "Listening…" appears only once audio is really being captured
     try {
-      const text = await listen(lang);
+      const text = await listen(lang, () => setHeard(t('voice.listening')));
       setPhase('thinking');
       if (!text.trim()) { say('voice.didntCatch'); return; } // nothing heard: no LLM round-trip
       let intent = parseIntent(text);

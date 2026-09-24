@@ -148,21 +148,22 @@ export function stopListening() {
  * Listen for one utterance. Sarvam first (best for Indian languages and code-mixed speech),
  * then the browser's recognition (Chrome, online). Rejects if neither is available.
  */
-export async function listen(lang: Lang): Promise<string> {
+export async function listen(lang: Lang, onStart?: () => void): Promise<string> {
   const ctl: { stop: boolean; recognizer?: { stop: () => void } } = { stop: false };
   listening = ctl;
-  try { return await listenOnce(lang, ctl); } finally { if (listening === ctl) listening = null; }
+  try { return await listenOnce(lang, ctl, onStart); } finally { if (listening === ctl) listening = null; }
 }
 
-async function listenOnce(lang: Lang, ctl: { stop: boolean; recognizer?: { stop: () => void } }): Promise<string> {
+async function listenOnce(lang: Lang, ctl: { stop: boolean; recognizer?: { stop: () => void } }, onStart?: () => void): Promise<string> {
   if (await sarvamAvailable()) {
-    const audio = await recordUtterance(undefined, ctl).catch(() => null);
+    const audio = await recordUtterance(undefined, ctl, onStart).catch(() => null);
     if (!audio) return '';
     const r = await api.transcribe(audio, lang);
     if (r) return r.text;
     // Sarvam failed mid-request: fall through and let the browser try a fresh listen.
   }
   if (ctl.stop) return '';
+  onStart?.();
   return browserListen(lang, ctl);
 }
 
