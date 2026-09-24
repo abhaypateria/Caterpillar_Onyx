@@ -5,6 +5,7 @@ import { MACHINES, OPERATORS } from '../engine';
 import { LANG_LABEL } from '../i18n';
 import { useStore } from '../store';
 import type { Lang } from '../types';
+import { term } from '../i18n/term';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -31,7 +32,7 @@ export default function Login() {
           <button key={o.id} className="ghost" style={{ height: 96, textAlign: 'left' }}
             onClick={() => { login(o.id, lang); nav('/dashboard'); }}>
             <div style={{ fontSize: 22 }}>{o.name}</div>
-            <div className="muted">{o.id} · {o.skill}</div>
+            <div className="muted">{o.id} · {term(t, 'skill', o.skill)}</div>
           </button>
         ))}
       </div>

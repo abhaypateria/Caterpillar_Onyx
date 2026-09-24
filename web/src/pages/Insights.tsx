@@ -72,7 +72,7 @@ export default function Insights() {
         <h3>{t('insights.observations')}</h3>
         <div className="tablewrap">
           <table className="data">
-            <thead><tr><th>Time</th><th>Machine</th><th>Cycles</th><th>Idle</th><th>Idle %</th><th>Fuel (exp.)</th><th>L/cycle</th><th>{t('safety.seatbelt')}</th><th>{t('insights.findings')}</th></tr></thead>
+            <thead><tr><th>{t('col.time')}</th><th>{t('col.machine')}</th><th>{t('col.cycles')}</th><th>{t('col.idle')}</th><th>{t('col.idlePct')}</th><th>{t('col.fuelExp')}</th><th>{t('col.lPerCycle')}</th><th>{t('safety.seatbelt')}</th><th>{t('insights.findings')}</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.timestamp}>

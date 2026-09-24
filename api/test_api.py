@@ -378,3 +378,19 @@ def test_sarvam_stt_roundtrip(lang):
     r = client.post("/speech/stt", json={"audio": audio, "lang": lang})
     assert r.status_code == 200, r.text
     assert SCRIPT[lang].search(r.json()["text"]), f"transcript not in {lang} script: {r.json()['text']!r}"
+
+
+# Sarvam returns Hindi/Tamil/Kannada in native script; the offline classifier must handle it.
+@pytest.mark.parametrize("text,kind", [
+    ("एक आदमी मशीन के पीछे आ गया", "proximity"),
+    ("मेरी सीट बेल्ट खुली थी", "seatbelt"),
+    ("ऑपरेटर को चोट लगी", "injury"),
+    ("ஒரு தொழிலாளி பின்னால் வந்தார்", "proximity"),
+    ("ಒಬ್ಬ ಕಾರ್ಮಿಕ ಹಿಂದೆ ಬಂದರು", "proximity"),
+])
+def test_classify_native_script(text, kind):
+    assert main.classify_incident(text)["type"] == kind
+
+
+def test_native_script_no_harm_is_not_injury():
+    assert main.classify_incident("बाल-बाल बचे, किसी को चोट नहीं लगी")["type"] == "near_miss"

@@ -8,8 +8,8 @@ import { useState } from 'react';
 const INK = 'var(--text)', MUTED = 'var(--muted)', GRID = 'var(--line)';
 
 /** Risk over time with threshold, event markers and a hover crosshair. */
-export function RiskChart({ points, threshold, cursor, markers, onPick }: {
-  points: { label: string; value: number }[]; threshold: number; cursor?: number;
+export function RiskChart({ points, threshold, cursor, markers, onPick, thresholdLabel = 'alarm' }: {
+  points: { label: string; value: number }[]; threshold: number; cursor?: number; thresholdLabel?: string;
   markers?: { index: number; label: string; tone: 'warn' | 'stop' }[]; onPick?: (i: number) => void;
 }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -32,7 +32,7 @@ export function RiskChart({ points, threshold, cursor, markers, onPick }: {
             <text x={L - 6} y={y(v) + 4} fill={MUTED} fontSize={11} textAnchor="end">{v * 100}%</text></g>
         ))}
         <line x1={L} x2={W - R} y1={y(threshold)} y2={y(threshold)} stroke="var(--warn)" strokeDasharray="5 4" strokeWidth={1.5} />
-        <text x={W - R} y={y(threshold) - 6} fill={MUTED} fontSize={11} textAnchor="end">alarm {threshold * 100}%</text>
+        <text x={W - R} y={y(threshold) - 6} fill={MUTED} fontSize={11} textAnchor="end">{thresholdLabel} {threshold * 100}%</text>
         {points.filter((_, i) => i % 12 === 0).map((p) => {
           const i = points.indexOf(p);
           return <text key={i} x={x(i)} y={H - 8} fill={MUTED} fontSize={11} textAnchor="middle">{p.label}</text>;

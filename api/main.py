@@ -48,19 +48,23 @@ LANG_SCRIPT = {"en": "English", "hi": "Hindi written in Devanagari script", "ta"
 # Keyword rules for the offline incident classifier (order = priority; first hit wins).
 INCIDENT_RULES: list[tuple[str, str, list[str]]] = [
     # (type, severity, keywords across en / hi-latin / common code-mix)
-    ("injury", "high", ["injur", "hurt", "bleed", "chot", "ghayal", "khoon"]),
+    ("injury", "high", ["injur", "hurt", "bleed", "chot", "ghayal", "khoon",
+                        "चोट", "घायल", "खून", "காயம்", "ரத்தம்", "ಗಾಯ", "ರಕ್ತ"]),
     # No bare "near" here: it would swallow "near miss".
     ("proximity", "high", ["person", "people", "worker", "someone", "helper", "aadmi", "aadami", "insaan", "peeche",
-                           "behind", "paas", "reversing", "blind", "near the machine", "near me"]),
-    ("seatbelt", "medium", ["seatbelt", "belt", "seat belt", "belt nahi", "belt khul"]),
-    ("damage", "medium", ["damage", "hit", "broke", "broken", "tuut", "toot", "takra", "dent", "bucket"]),
+                           "behind", "paas", "reversing", "blind", "near the machine", "near me",
+                           # Native script, as returned by Sarvam speech-to-text
+                           "आदमी", "व्यक्ति", "मज़दूर", "मजदूर", "पीछे", "ஆள்", "தொழிலாளி", "பின்னால்", "ವ್ಯಕ್ತಿ", "ಕಾರ್ಮಿಕ", "ಹಿಂದೆ"]),
+    ("seatbelt", "medium", ["seatbelt", "belt", "seat belt", "belt nahi", "belt khul", "बेल्ट", "பெல்ட்", "ಬೆಲ್ಟ್"]),
+    ("damage", "medium", ["damage", "hit", "broke", "broken", "tuut", "toot", "takra", "dent", "bucket", "टूट", "टकरा", "नुकसान", "சேதம்", "ಹಾನಿ"]),
 ]
-NEAR_MISS_WORDS = ["near miss", "near-miss", "almost", "nearly", "bach gaya", "baal baal", "close call"]
+NEAR_MISS_WORDS = ["near miss", "near-miss", "almost", "nearly", "bach gaya", "baal baal", "close call", "बाल-बाल", "बाल बाल", "बच गया"]
 # "No one was hurt" / "chot nahi lagi" must not count as an injury.
 NO_HARM = re.compile(
     r"\b(no ?one|nobody|none of us)\s+(was\s+|got\s+|is\s+)?(hurt|injured)"
     r"|\b(was\s*n[o']?t|not)\s+(hurt|injured)"
     r"|\b(kisi ko |koi )?chot nahi( lagi| aayi)?"
+    r"|(किसी को |कोई )?चोट नहीं( लगी| आई)?"
 )
 
 

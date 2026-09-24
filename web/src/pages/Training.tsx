@@ -38,6 +38,14 @@ const INCIDENT_TO_LESSON: Record<string, string> = { proximity: 'proximity', sea
 export default function Training() {
   const { t } = useTranslation();
   const { incidents, lang } = useStore();
+  // Built-in lessons in the operator's language (English text stays as the fallback).
+  const catalog = useMemo(() => CATALOG.map((l): Lesson => ({
+    ...l,
+    title: t(`lesson.${l.id}.title`, { defaultValue: l.title }),
+    reason: l.reason && t(`lesson.${l.id}.reason`, { defaultValue: l.reason }),
+    steps: l.steps.map((st, i) => t(`lesson.${l.id}.s${i}`, { defaultValue: st })),
+    quiz: l.quiz.map((q) => ({ ...q, q: t(`lesson.${l.id}.q`, { defaultValue: q.q }), options: q.options.map((o, i) => t(`lesson.${l.id}.o${i}`, { defaultValue: o })) })),
+  })), [t]);
   const [open, setOpen] = useState<Lesson | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [booked, setBooked] = useState(false);
@@ -45,9 +53,9 @@ export default function Training() {
 
   const latest = incidents[0];
   const recommended = useMemo(() => {
-    if (latest) return CATALOG.find((l) => l.id === INCIDENT_TO_LESSON[latest.type]) ?? CATALOG[0];
-    return CATALOG[0];
-  }, [latest]);
+    if (latest) return catalog.find((l) => l.id === INCIDENT_TO_LESSON[latest.type]) ?? catalog[0];
+    return catalog[0];
+  }, [latest, catalog]);
 
   function startLesson(l: Lesson) { setOpen(l); setAnswers({}); }
   function playAudio(l: Lesson) { speak(`${l.title}. ${l.steps.join(' ')}`, lang); }
@@ -61,7 +69,7 @@ export default function Training() {
     setLoading(false);
     const l: Lesson = res
       ? { id: 'incident', title: res.title, reason: t('training.fromIncident'), steps: res.steps, quiz: res.quiz }
-      : { ...(CATALOG.find((c) => c.id === INCIDENT_TO_LESSON[latest.type]) ?? CATALOG[1]), id: 'incident', reason: t('training.fromIncident') };
+      : { ...(catalog.find((c) => c.id === INCIDENT_TO_LESSON[latest.type]) ?? catalog[1]), id: 'incident', reason: t('training.fromIncident') };
     startLesson(l);
   }
 
@@ -125,7 +133,7 @@ export default function Training() {
 
       <h3>{t('training.lessons')}</h3>
       <div className="grid">
-        {CATALOG.map((l) => (
+        {catalog.map((l) => (
           <div key={l.id} className="card">
             <h3 style={{ marginBottom: 8 }}>{l.title}</h3>
             <button className="ghost" onClick={() => startLesson(l)}>{t('training.start')}</button>

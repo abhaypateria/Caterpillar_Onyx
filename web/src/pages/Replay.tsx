@@ -98,7 +98,7 @@ export default function Replay() {
               <div className="bignum mono">{hhmm(w.t)}</div>
               <div className="row" style={{ marginTop: 8 }}>
                 <span className={`pill ${w.seatbelt ? 'ok' : 'stop'}`}>{t('safety.seatbelt')}: {w.seatbelt ? t('safety.fastened') : t('safety.unfastened')}</span>
-                <span className="pill mono">{w.cycles} cyc · {w.idleMin} idle</span>
+                <span className="pill mono">{w.cycles} {t('unit.cycles')} · {w.idleMin} {t('common.minutes')} {t('unit.idle')}</span>
                 {w.truckEtaMin !== null && <span className="pill warn">🚚 +{w.truckEtaMin} {t('common.minutes')}</span>}
                 <span className="pill mono">{w.tempC}°C</span>
               </div>
@@ -110,7 +110,7 @@ export default function Replay() {
           </div>
           <RiskChart
             points={steps.map((x) => ({ label: hhmm(x.t), value: x.risk }))}
-            threshold={RISK_THRESHOLD} cursor={idx} onPick={(i) => { setPlaying(false); setIdx(i); }}
+            threshold={RISK_THRESHOLD} thresholdLabel={t('replay.alarmLine')} cursor={idx} onPick={(i) => { setPlaying(false); setIdx(i); }}
             markers={[
               ...(firstAlarm >= 0 ? [{ index: firstAlarm, label: `${t('replay.warns')} ${hhmm(windows[firstAlarm].t)}`, tone: 'warn' as const }] : []),
               ...(beltOff >= 0 ? [{ index: beltOff, label: `${t('replay.beltOff')} ${hhmm(windows[beltOff].t)}`, tone: 'stop' as const }] : []),
@@ -151,7 +151,7 @@ export default function Replay() {
           <h3>{t('replay.realRows')}</h3>
           <div className="tablewrap">
             <table className="data">
-              <thead><tr><th>Time</th><th>Cycles</th><th>Idle</th><th>L/cycle</th><th>{t('safety.seatbelt')}</th></tr></thead>
+              <thead><tr><th>{t('col.time')}</th><th>{t('col.cycles')}</th><th>{t('col.idle')}</th><th>{t('col.lPerCycle')}</th><th>{t('safety.seatbelt')}</th></tr></thead>
               <tbody>
                 {PROVIDED_TELEMETRY.map((r) => (
                   <tr key={r.timestamp}>

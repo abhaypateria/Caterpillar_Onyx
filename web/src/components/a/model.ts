@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { Machine, Operator, ScheduledTask, Weather } from '../../types';
 import { MACHINES, OPERATORS, PROVIDED_TASKS, fitEta, predictEta } from '../../engine';
+import i18n from '../../i18n';
 
 /** ETA model fitted on the organisers' 5 tasks (priors carry the rest; see engine/eta.ts). */
 export const etaModel = fitEta(PROVIDED_TASKS);
@@ -42,7 +43,10 @@ export function factorLabel(t: TFunction, factor: string) {
   return t(`factor.${factor}`);
 }
 
-export const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : `${Math.round(m)}m`);
+export const fmtMin = (m: number) => {
+  const h = i18n.t('unit.h'), mm = i18n.t('unit.m');
+  return m >= 60 ? `${Math.floor(m / 60)}${h} ${Math.round(m % 60)}${mm}` : `${Math.round(m)}${mm}`;
+};
 export const addMin = (hhmm: string, min: number) => {
   const [h, m] = hhmm.split(':').map(Number);
   const tot = h * 60 + m + Math.round(min);

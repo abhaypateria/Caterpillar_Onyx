@@ -6,6 +6,7 @@ import { fetchWeather } from '../api/client';
 import type { IncidentType, Severity, Weather } from '../types';
 import Proximity from '../components/a/Proximity';
 import '../components/a/a.css';
+import { term } from '../i18n/term';
 
 export default function Safety() {
   const { t } = useTranslation();
@@ -70,17 +71,17 @@ export default function Safety() {
           <div className="fields" style={{ marginTop: 12 }}>
             <label className="field">{t('safety.weather')}
               <select value={conditions.weather} onChange={(e) => setConditions({ weather: e.target.value as Weather })}>
-                {['Sunny', 'Cloudy', 'Windy', 'Rainy'].map((x) => <option key={x}>{x}</option>)}
+                {['Sunny', 'Cloudy', 'Windy', 'Rainy'].map((x) => <option key={x} value={x}>{term(t, 'weather', x)}</option>)}
               </select></label>
             <label className="field">°C<input type="number" value={conditions.tempC} onChange={(e) => setConditions({ tempC: +e.target.value })} /></label>
             <label className="field">RH %<input type="number" value={conditions.humidity} onChange={(e) => setConditions({ humidity: +e.target.value })} /></label>
             <label className="field">{t('safety.ground')}
               <select value={conditions.ground} onChange={(e) => setConditions({ ground: e.target.value as Ground })}>
-                {['Firm', 'Muddy', 'Slope'].map((x) => <option key={x}>{x}</option>)}
+                {['Firm', 'Muddy', 'Slope'].map((x) => <option key={x} value={x}>{term(t, 'ground', x)}</option>)}
               </select></label>
             <label className="field">{t('safety.light')}
               <select value={conditions.light} onChange={(e) => setConditions({ light: e.target.value as Light })}>
-                {['Day', 'Dusk', 'Night'].map((x) => <option key={x}>{x}</option>)}
+                {['Day', 'Dusk', 'Night'].map((x) => <option key={x} value={x}>{term(t, 'light', x)}</option>)}
               </select></label>
             <label className="field">{t('safety.dust')}
               <select value={conditions.dust ? 'y' : 'n'} onChange={(e) => setConditions({ dust: e.target.value === 'y' })}>

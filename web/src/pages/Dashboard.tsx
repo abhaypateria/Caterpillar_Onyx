@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { PROVIDED_TASKS, liveEta, mape, predictEta } from '../engine';
 import { addMin, defaultTasks, etaModel, factorLabel, fmtMin, machineById, opById, predict, tasksKey } from '../components/a/model';
 import '../components/a/a.css';
+import { term } from '../i18n/term';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -46,8 +47,8 @@ export default function Dashboard() {
     <div style={{ display: 'grid', gap: 16 }}>
       <section className="hero">
         <div className="card">
-          <div className="kicker">{t('dashboard.currentTask')} · {current.time} · {current.site}</div>
-          <h1 className="display" style={{ fontSize: 'clamp(32px, 6vw, 52px)', margin: '6px 0 14px' }}>{current.type}</h1>
+          <div className="kicker">{t('dashboard.currentTask')} · {current.time} · {term(t, 'site', current.site)}</div>
+          <h1 className="display" style={{ fontSize: 'clamp(32px, 6vw, 52px)', margin: '6px 0 14px' }}>{term(t, 'task', current.type)}</h1>
           <div className="row" style={{ alignItems: 'flex-end', gap: 24 }}>
             <div>
               <div className="kicker">{t('dashboard.eta')}</div>
@@ -61,9 +62,9 @@ export default function Dashboard() {
           </div>
           <div className="progress" aria-label={`${pct}%`}><span style={{ width: `${pct}%` }} /></div>
           <div className="row muted mono" style={{ justifyContent: 'space-between' }}>
-            <span>{current.doneCycles}/{current.totalCycles} cycles</span>
-            <span>{fmtMin(current.elapsedMin ?? 0)} elapsed</span>
-            {live && <span>{live.perCycle.toFixed(2)} min/cycle</span>}
+            <span>{current.doneCycles}/{current.totalCycles} {t('unit.cycles')}</span>
+            <span>{fmtMin(current.elapsedMin ?? 0)} {t('unit.elapsed')}</span>
+            {live && <span>{live.perCycle.toFixed(2)} {t('unit.perCycle')}</span>}
           </div>
           <div className="actions">
             <button disabled={current.status === 'active'} onClick={() => updateTask(current.id, { status: 'active', startedAt: Date.now() })}>{current.status === 'active' ? `● ${t('status.active')}` : `▶ ${t('dashboard.start')}`}</button>
@@ -85,7 +86,7 @@ export default function Dashboard() {
                 <b className="mono">{live.eta - pred!.minutes > 0 ? '+' : ''}{Math.round(live.eta - pred!.minutes)} {t('common.minutes')}</b></li>
             )}
           </ul>
-          <p className="muted" style={{ fontSize: 13 }}>{t('dashboard.confidence')}: {Math.round(pred!.confidence * 100)}% · {op.skill} · {conditions.weather} · {machine.id} ({machine.ageYrs}y)</p>
+          <p className="muted" style={{ fontSize: 13 }}>{t('dashboard.confidence')}: {Math.round(pred!.confidence * 100)}% · {term(t, 'skill', op.skill)} · {term(t, 'weather', conditions.weather)} · {machine.id} · {t('factor.machineAge', { years: machine.ageYrs })}</p>
         </div>
       </section>
 
@@ -99,7 +100,7 @@ export default function Dashboard() {
               return (
                 <li key={x.id}>
                   <b className="mono">{x.time}</b>
-                  <span>{x.type}<br /><small className="muted">{x.site} · {t('dashboard.planned')} {fmtMin(x.plannedMin)} → {t('dashboard.eta')} {fmtMin(p.minutes)}</small></span>
+                  <span>{term(t, 'task', x.type)}<br /><small className="muted">{term(t, 'site', x.site)} · {t('dashboard.planned')} {fmtMin(x.plannedMin)} → {t('dashboard.eta')} {fmtMin(p.minutes)}</small></span>
                   <span className={`pill ${tone}`}>{t(`status.${x.status}`)}</span>
                 </li>
               );
@@ -111,12 +112,12 @@ export default function Dashboard() {
           <h3>{t('dashboard.validation')}</h3>
           <div className="tablewrap">
             <table className="data">
-              <thead><tr><th>Task</th><th>Skill</th><th>Weather</th><th>{t('dashboard.planned')}</th><th>Onyx</th><th>Actual</th></tr></thead>
+              <thead><tr><th>{t('col.task')}</th><th>{t('col.skill')}</th><th>{t('col.weather')}</th><th>{t('dashboard.planned')}</th><th>Onyx</th><th>{t('col.actual')}</th></tr></thead>
               <tbody>
                 {PROVIDED_TASKS.map((r) => {
                   const p = Math.round(predictEta(etaModel, r).minutes);
                   const closer = Math.abs(p - r.actual) < Math.abs(r.estimated - r.actual);
-                  return <tr key={r.id}><td>{r.id} {r.type}</td><td>{r.skill}</td><td>{r.weather}</td>
+                  return <tr key={r.id}><td>{r.id} {term(t, 'task', r.type)}</td><td>{term(t, 'skill', r.skill)}</td><td>{term(t, 'weather', r.weather)}</td>
                     <td className="mono">{r.estimated}</td><td className="mono"><b>{p}</b> {closer ? '✓' : ''}</td><td className="mono">{r.actual}</td></tr>;
                 })}
               </tbody>

@@ -186,7 +186,8 @@
     "btFalse": "False alarms per shift",
     "btNote": "{{n}} simulated shifts each. Control days unbuckle at random: a low catch rate there shows the model is not simply echoing the simulator.",
     "riskLabel": "Unbuckle risk · 15 min",
-    "fatigue": "Fatigue"
+    "fatigue": "Fatigue",
+    "alarmLine": "alarm"
   },
   "cause": {
     "truck_delay": "Waiting for truck",
@@ -283,5 +284,112 @@
     "open": "Open",
     "close": "Close",
     "atMachine": "at {{machine}}"
+  },
+  "term": {
+    "task": {
+      "earth_excavation": "Earth Excavation",
+      "trenching": "Trenching",
+      "material_loading": "Material Loading",
+      "grading": "Grading",
+      "demolition": "Demolition"
+    },
+    "site": {
+      "zone_a_foundation": "Zone A · foundation",
+      "zone_b_utility_line": "Zone B · utility line",
+      "old_pump_house": "Old pump house",
+      "zone_c_drainage": "Zone C · drainage",
+      "stockpile_1": "Stockpile 1",
+      "stockpile_2": "Stockpile 2",
+      "access_road": "Access road",
+      "parking_area": "Parking area"
+    },
+    "skill": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "expert": "Expert"
+    },
+    "weather": {
+      "sunny": "Sunny",
+      "cloudy": "Cloudy",
+      "windy": "Windy",
+      "rainy": "Rainy"
+    },
+    "ground": {
+      "firm": "Firm",
+      "muddy": "Muddy",
+      "slope": "Slope"
+    },
+    "light": {
+      "day": "Day",
+      "dusk": "Dusk",
+      "night": "Night"
+    }
+  },
+  "unit": {
+    "h": "h",
+    "m": "m",
+    "cycles": "cycles",
+    "elapsed": "elapsed",
+    "perCycle": "min/cycle",
+    "idle": "idle"
+  },
+  "col": {
+    "task": "Task",
+    "skill": "Skill",
+    "weather": "Weather",
+    "actual": "Actual",
+    "time": "Time",
+    "machine": "Machine",
+    "cycles": "Cycles",
+    "idle": "Idle (min)",
+    "idlePct": "Idle %",
+    "fuelExp": "Fuel (expected)",
+    "lPerCycle": "L/cycle"
+  },
+  "lesson": {
+    "idle": {
+      "title": "Reducing unnecessary idle time",
+      "reason": "idle time above your average",
+      "s0": "Switch the engine off when you wait more than three minutes.",
+      "s1": "Line up the next load before the truck arrives.",
+      "s2": "Idling burns 3–5 litres an hour and adds engine hours for no work.",
+      "q": "The truck is 10 minutes away. What is best?",
+      "o0": "Keep idling",
+      "o1": "Switch off and stay ready",
+      "o2": "Rev the engine"
+    },
+    "proximity": {
+      "title": "Keeping people out of the swing radius",
+      "reason": "a proximity near-miss",
+      "s0": "Sound the horn twice before you swing or reverse.",
+      "s1": "Never move while a person is inside the swing radius.",
+      "s2": "Use a spotter for blind-side moves and keep eye contact.",
+      "q": "A worker walks behind you while reversing. First action?",
+      "o0": "Reverse faster",
+      "o1": "Stop and wait until clear",
+      "o2": "Keep moving, horn on"
+    },
+    "seatbelt": {
+      "title": "Seatbelt every time the engine runs",
+      "reason": "a seatbelt alert",
+      "s0": "Fasten the belt before you start the engine.",
+      "s1": "It keeps you inside the cab if the machine tips or jolts.",
+      "s2": "Keep it on even for short moves across the site.",
+      "q": "When must the seatbelt be fastened?",
+      "o0": "On slopes only",
+      "o1": "Whenever the engine runs",
+      "o2": "On roads only"
+    },
+    "heat": {
+      "title": "Working safely in heat",
+      "reason": "high heat this shift",
+      "s0": "Drink water every hour, before you feel thirsty.",
+      "s1": "Take the recommended break when Onyx suggests it.",
+      "s2": "Watch for dizziness or cramps and tell your supervisor.",
+      "q": "When should you drink water?",
+      "o0": "Only at lunch",
+      "o1": "Every hour",
+      "o2": "When dizzy"
+    }
   }
 }

@@ -6,6 +6,7 @@ import { api } from '../api/client';
 import { listen, parseIntent, speak, type Intent } from '../voice';
 import { fitEta, predictEta, liveEta, PROVIDED_TASKS, OPERATORS, MACHINES } from '../engine';
 import type { ScheduledTask } from '../types';
+import { term } from '../i18n/term';
 
 /**
  * Push-to-talk button. Owner: Person B.
@@ -60,7 +61,7 @@ export default function VoiceButton() {
   async function reportIncident(text: string) {
     say('voice.incidentPrompt');
     const structured = (await api.structureIncident(text, lang)) ?? {
-      type: /person|aadmi|worker|peeche|behind|near/i.test(text) ? ('proximity' as const) : ('near_miss' as const),
+      type: /person|aadmi|worker|peeche|behind|near|आदमी|व्यक्ति|मज़दूर|पीछे|ஆள்|தொழிலாளி|பின்னால்|ವ್ಯಕ್ತಿ|ಕಾರ್ಮಿಕ|ಹಿಂದೆ/i.test(text) ? ('proximity' as const) : ('near_miss' as const),
       severity: 'medium' as const,
       description: text,
     };
@@ -88,7 +89,7 @@ export default function VoiceButton() {
     if (pending) {
       if (intent.name === 'confirm') {
         store.updateTask(pending.task.id, { status: 'done', doneCycles: pending.task.totalCycles });
-        say('voice.markedDone', { task: pending.task.type });
+        say('voice.markedDone', { task: term(t, 'task', pending.task.type) });
       } else if (intent.name === 'cancel') {
         say('voice.cancelled');
       } else {
@@ -101,17 +102,17 @@ export default function VoiceButton() {
 
     switch (intent.name) {
       case 'next_task':
-        if (next) say('voice.nextTask', { task: next.type, min: next.plannedMin });
+        if (next) say('voice.nextTask', { task: term(t, 'task', next.type), min: next.plannedMin });
         else say('voice.noNextTask');
         break;
       case 'task_done':
-        if (active) { setPending({ kind: 'confirmDone', task: active }); say('voice.confirmDone', { task: active.type }); }
-        else if (next) { setPending({ kind: 'confirmDone', task: next }); say('voice.confirmDone', { task: next.type }); }
+        if (active) { setPending({ kind: 'confirmDone', task: active }); say('voice.confirmDone', { task: term(t, 'task', active.type) }); }
+        else if (next) { setPending({ kind: 'confirmDone', task: next }); say('voice.confirmDone', { task: term(t, 'task', next.type) }); }
         else say('voice.noActiveTask');
         break;
       case 'eta': {
         const task = active ?? next;
-        if (task) say('voice.etaSpoken', { task: task.type, min: etaMinutes(task) });
+        if (task) say('voice.etaSpoken', { task: term(t, 'task', task.type), min: etaMinutes(task) });
         else say('voice.noActiveTask');
         break;
       }
