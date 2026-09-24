@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import type { Lang, Priority } from '../types';
 import { SPEECH_LOCALE } from '../i18n';
 import { recordUtterance, sarvamAvailable, sarvamTts } from './sarvam';
@@ -12,20 +13,74 @@ import { api } from '../api/client';
 // ----- Speaking (priority queue: critical interrupts, warning waits, info only when idle) -----
 const queue: { text: string; lang: Lang; priority: Priority }[] = [];
 let speaking = false;
+let paused = false;
+let current: string | null = null;
 let playing: HTMLAudioElement | null = null;
+// Bumped on stop: callbacks from an older generation (ended utterances, late Sarvam audio) are ignored.
+let gen = 0;
 
+export type SpeechState = 'idle' | 'speaking' | 'paused';
+const listeners = new Set<() => void>();
+let state: SpeechState = 'idle';
+function emit() {
+  const next: SpeechState = paused ? 'paused' : speaking || queue.length ? 'speaking' : 'idle';
+  if (next !== state) { state = next; listeners.forEach((f) => f()); }
+}
+export const getSpeechState = () => state;
+export function onSpeechState(f: () => void) { listeners.add(f); return () => { listeners.delete(f); }; }
+/** React hook: current speech state, for Play/Pause/Stop buttons. */
+export const useSpeechState = () => useSyncExternalStore(onSpeechState, getSpeechState);
+
+const supported = () => 'speechSynthesis' in window || typeof Audio !== 'undefined';
+
+/**
+ * Queue a message. The same text is never queued twice (already playing or waiting),
+ * so repeated triggers don't make the assistant say it again and again.
+ */
 export function speak(text: string, lang: Lang, priority: Priority = 'info') {
-  if (!('speechSynthesis' in window) && typeof Audio === 'undefined') return;
-  if (priority === 'critical') {
-    window.speechSynthesis?.cancel();
-    playing?.pause(); playing = null;
-    queue.length = 0; speaking = false;
-  }
+  if (!supported() || !text.trim()) return;
+  if (priority === 'critical') stopSpeaking();
+  else if (text === current || queue.some((q) => q.text === text)) return;
   queue.push({ text, lang, priority });
   queue.sort((a, b) => rank(a.priority) - rank(b.priority));
+  emit();
   drain();
 }
 const rank = (p: Priority) => (p === 'critical' ? 0 : p === 'warning' ? 1 : 2);
+
+/** Play these parts from the start, replacing anything that was playing (e.g. a lesson's Play button). */
+export function speakSequence(parts: string[], lang: Lang) {
+  if (!supported()) return;
+  stopSpeaking();
+  for (const text of parts) if (text.trim()) queue.push({ text, lang, priority: 'info' });
+  emit();
+  drain();
+}
+
+/** Stop now and forget everything queued. */
+export function stopSpeaking() {
+  gen++;
+  queue.length = 0;
+  window.speechSynthesis?.cancel();
+  playing?.pause(); playing = null;
+  speaking = false; paused = false; current = null;
+  emit();
+}
+
+/** Pause mid-sentence; resumeSpeaking() continues from the same point. */
+export function pauseSpeaking() {
+  if (!speaking || paused) return;
+  paused = true;
+  if (playing) playing.pause(); else window.speechSynthesis?.pause();
+  emit();
+}
+export function resumeSpeaking() {
+  if (!paused) return;
+  paused = false;
+  if (playing) playing.play().catch(() => undefined); else window.speechSynthesis?.resume();
+  emit();
+  if (!speaking) drain();
+}
 
 /** A device voice for this language, if any (Windows often has none for ta/kn). */
 function deviceVoice(lang: Lang) {
@@ -37,18 +92,26 @@ function deviceVoice(lang: Lang) {
 
 /** Device voice when available (instant); otherwise Sarvam audio; otherwise best-effort device speech. */
 async function drain() {
-  if (speaking || !queue.length) return;
+  if (speaking || paused || !queue.length) return;
   const next = queue.shift()!;
-  speaking = true;
-  const done = () => { speaking = false; playing = null; drain(); };
+  const g = gen;
+  speaking = true; current = next.text;
+  emit();
+  const done = () => {
+    if (g !== gen) return; // stopped meanwhile
+    speaking = false; playing = null; current = null;
+    emit();
+    drain();
+  };
   const voice = deviceVoice(next.lang);
   if (!voice && (await sarvamAvailable())) {
     const url = await sarvamTts(next.text, next.lang);
-    if (url && speaking) {
+    if (g !== gen) return;
+    if (url) {
       const a = new Audio(url);
       playing = a;
       a.onended = a.onerror = done;
-      a.play().catch(done);
+      if (!paused) a.play().catch(done);
       return;
     }
   }

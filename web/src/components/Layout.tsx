@@ -7,6 +7,7 @@ import type { Lang } from '../types';
 import AlertBanner from './AlertBanner';
 import VoiceButton from './VoiceButton';
 import SafetyMonitor from './a/SafetyMonitor';
+import SpeechControls from './SpeechControls';
 import './layout.css';
 
 const NAV = ['dashboard', 'safety', 'replay', 'insights', 'training', 'summary', 'supervisor'] as const;
@@ -32,6 +33,7 @@ export default function Layout() {
         {NAV.map((n) => <NavLink key={n} to={`/${n}`}>{t(`nav.${n}`)}</NavLink>)}
       </nav>
       <main className="page"><Outlet /></main>
+      <SpeechControls />
       <VoiceButton />
       <SafetyMonitor />
     </div>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../store';
 import { api } from '../api/client';
-import { speak } from '../voice';
+import { pauseSpeaking, resumeSpeaking, speakSequence, stopSpeaking, useSpeechState } from '../voice';
 import type { IncidentType } from '../types';
 
 /** Owner: Person B. Micro-learning: catalog + audio player + quiz, plus near-miss → lesson. */
@@ -38,6 +38,7 @@ const INCIDENT_TO_LESSON: Record<string, string> = { proximity: 'proximity', sea
 export default function Training() {
   const { t } = useTranslation();
   const { incidents, lang } = useStore();
+  const speech = useSpeechState();
   // Built-in lessons in the operator's language (English text stays as the fallback).
   const catalog = useMemo(() => CATALOG.map((l): Lesson => ({
     ...l,
@@ -58,7 +59,10 @@ export default function Training() {
   }, [latest, catalog]);
 
   function startLesson(l: Lesson) { setOpen(l); setAnswers({}); }
-  function playAudio(l: Lesson) { speak(`${l.title}. ${l.steps.join(' ')}`, lang); }
+  // Play always restarts from the beginning (never queues a second copy); sentence by sentence
+  // so Pause/Resume continue where they left off.
+  function playAudio(l: Lesson) { speakSequence([l.title, ...l.steps], lang); }
+  function closeLesson() { stopSpeaking(); setOpen(null); }
   const score = open ? open.quiz.reduce((s, q, i) => s + (answers[i] === q.answer ? 1 : 0), 0) : 0;
   const allAnswered = open ? open.quiz.every((_, i) => answers[i] !== undefined) : false;
 
@@ -76,12 +80,17 @@ export default function Training() {
   if (open) {
     return (
       <div style={{ display: 'grid', gap: 16 }}>
-        <div className="row"><button className="ghost" onClick={() => setOpen(null)}>←</button><h2 style={{ margin: 0 }}>{open.title}</h2></div>
+        <div className="row"><button className="ghost" onClick={closeLesson}>←</button><h2 style={{ margin: 0 }}>{open.title}</h2></div>
         {open.reason && <span className="pill warn">{open.reason}</span>}
         <div className="card">
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <strong>{t('training.steps')}</strong>
-            <button onClick={() => playAudio(open)}>▶ {t('training.play')}</button>
+            <div className="row">
+              <button onClick={() => playAudio(open)}>▶ {t('training.play')}</button>
+              {speech === 'speaking' && <button className="ghost" onClick={pauseSpeaking}>⏸ {t('speech.pause')}</button>}
+              {speech === 'paused' && <button className="ghost" onClick={resumeSpeaking}>▶ {t('speech.resume')}</button>}
+              {speech !== 'idle' && <button className="ghost" onClick={stopSpeaking}>⏹ {t('speech.stop')}</button>}
+            </div>
           </div>
           <ol style={{ lineHeight: 1.7, marginBottom: 0 }}>{open.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
         </div>

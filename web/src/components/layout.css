@@ -21,3 +21,7 @@
   .nav a { padding: 10px 12px; }
   .voicebtn { width: 64px; height: 64px; right: 14px; }
 }
+/* Pause/Resume/Stop for whatever Onyx is saying; sits just above the mic button. */
+.speechctl { position: fixed; right: 20px; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; z-index: 20; }
+.speechctl button { min-height: 48px; padding: 0 16px; box-shadow: 0 4px 16px #0008; }
+@media (max-width: 560px) { .speechctl { right: 14px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); } }

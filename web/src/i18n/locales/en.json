@@ -391,5 +391,11 @@
       "o1": "Every hour",
       "o2": "When dizzy"
     }
+  },
+  "speech": {
+    "controls": "Speech controls",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop"
   }
 }
