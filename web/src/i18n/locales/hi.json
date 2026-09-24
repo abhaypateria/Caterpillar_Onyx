@@ -34,7 +34,11 @@
     "confidence": "भरोसा",
     "today": "आज के काम",
     "validation": "योजना बनाम Onyx · 5 असली काम",
-    "errorLine": "औसत गलती: Onyx {{onyx}}% बनाम योजना {{planner}}%।"
+    "errorLine": "औसत गलती: Onyx {{onyx}}% बनाम योजना {{planner}}%।",
+    "timeLeft": "बचा समय",
+    "total": "कुल",
+    "finishAt": "पूरा होगा",
+    "elapsedLabel": "बीता समय"
   },
   "status": {
     "scheduled": "तय",

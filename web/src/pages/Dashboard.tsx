@@ -23,12 +23,19 @@ export default function Dashboard() {
 
   const eta = live?.eta ?? pred?.minutes ?? 0;
   const low = live?.low ?? pred?.low ?? 0, high = live?.high ?? pred?.high ?? 0;
+  // Before the task starts the headline is the predicted duration; once it runs it is the time LEFT,
+  // which counts down as cycles complete (the total stays visible underneath).
+  const running = current?.status === 'active';
+  const elapsed = current?.elapsedMin ?? 0;
+  const headline = running ? Math.max(0, eta - elapsed) : eta;
+  const hLow = running ? Math.max(0, low - elapsed) : low, hHigh = running ? Math.max(0, high - elapsed) : high;
   const pct = current ? Math.round((current.doneCycles / current.totalCycles) * 100) : 0;
 
   /** Demo clock: each load cycle takes the operator's true pace (skill) with some noise. */
   function addCycle() {
     if (!current || !pred) return;
-    const perCycle = (pred.minutes / current.totalCycles) * (0.85 + Math.random() * 0.4);
+    // Demo clock: the operator's predicted pace with ±8% variation per load cycle.
+    const perCycle = (pred.minutes / current.totalCycles) * (0.92 + Math.random() * 0.16);
     const doneCycles = current.doneCycles + 1;
     updateTask(current.id, { doneCycles, elapsedMin: (current.elapsedMin ?? 0) + perCycle, ...(doneCycles >= current.totalCycles ? { status: 'done' } : {}) });
   }
@@ -51,13 +58,15 @@ export default function Dashboard() {
           <h1 className="display" style={{ fontSize: 'clamp(32px, 6vw, 52px)', margin: '6px 0 14px' }}>{term(t, 'task', current.type)}</h1>
           <div className="row" style={{ alignItems: 'flex-end', gap: 24 }}>
             <div>
-              <div className="kicker">{t('dashboard.eta')}</div>
-              <div className="bignum mono">{fmtMin(eta)}</div>
+              <div className="kicker">{running ? t('dashboard.timeLeft') : t('dashboard.eta')}</div>
+              <div className="bignum mono">{fmtMin(headline)}</div>
             </div>
             <div className="muted">
               <div>{t('dashboard.planned')}: <b className="mono" style={{ color: 'var(--text)' }}>{fmtMin(current.plannedMin)}</b></div>
-              <div>{t('dashboard.range')}: <span className="mono">{fmtMin(low)} – {fmtMin(high)}</span></div>
-              <div>≈ {addMin(current.time, eta)}</div>
+              <div>{t('dashboard.range')}: <span className="mono">{fmtMin(hLow)} – {fmtMin(hHigh)}</span></div>
+              {running && <div>{t('dashboard.elapsedLabel')}: <b className="mono" style={{ color: 'var(--text)' }}>{fmtMin(elapsed)}</b></div>}
+              {running && <div>{t('dashboard.total')}: <span className="mono">{fmtMin(eta)}</span></div>}
+              <div>{t('dashboard.finishAt')} ≈ {addMin(current.time, eta)}</div>
             </div>
           </div>
           <div className="progress" aria-label={`${pct}%`}><span style={{ width: `${pct}%` }} /></div>

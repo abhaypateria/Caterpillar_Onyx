@@ -34,7 +34,11 @@
     "confidence": "Confidence",
     "today": "Today's tasks",
     "validation": "Planner vs Onyx · organisers' 5 tasks",
-    "errorLine": "Average error: Onyx {{onyx}}% vs planner {{planner}}%. In-sample: the model is fitted on these 5 tasks plus expert priors; the held-out check is in the engine tests."
+    "errorLine": "Average error: Onyx {{onyx}}% vs planner {{planner}}%. In-sample: the model is fitted on these 5 tasks plus expert priors; the held-out check is in the engine tests.",
+    "timeLeft": "Time left",
+    "total": "Total",
+    "finishAt": "Finishes",
+    "elapsedLabel": "Elapsed"
   },
   "status": {
     "scheduled": "Scheduled",
