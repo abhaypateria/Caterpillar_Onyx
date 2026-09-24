@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '../../store';
 import { proximityThresholds } from '../../engine';
 import { say } from './say';
+import { personDistance } from './distance';
 
 type Dir = 'front' | 'rear' | 'left' | 'right';
 const DIRS: Dir[] = ['front', 'rear', 'left', 'right'];
@@ -18,7 +19,12 @@ export default function Proximity() {
   const engineOn = useStore((s) => s.machine.engineOn);
   const th = proximityThresholds(conditions);
   const [zones, setZones] = useState<Record<Dir, number>>({ front: 14, rear: 16, left: 12, right: 15 });
+  // camWanted is the on/off switch; cam is only the status. Keeping them apart matters: the stream
+  // must not restart (or stop) when the status changes from 'loading' to 'on'.
+  const [camWanted, setCamWanted] = useState(false);
   const [cam, setCam] = useState<'off' | 'loading' | 'on' | 'error'>('off');
+  const thRef = useRef(th);
+  thRef.current = th;
   const [camDist, setCamDist] = useState<{ d: number; dir: Dir } | null>(null);
   const intrusion = useRef<{ dir: Dir; d: number } | null>(null);
   const lastLog = useRef(0);
@@ -39,9 +45,10 @@ export default function Proximity() {
     return () => clearInterval(id);
   }, []);
 
-  // Webcam detection loop.
+  // Webcam detection loop (live until the operator stops it).
   useEffect(() => {
-    if (cam !== 'loading') return;
+    if (!camWanted) { setCam('off'); setCamDist(null); return; }
+    setCam('loading');
     let stop = false, stream: MediaStream | null = null;
     (async () => {
       try {
@@ -49,10 +56,12 @@ export default function Proximity() {
         await tf.ready();
         const model = await coco.load({ base: 'lite_mobilenet_v2' });
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        if (stop) { stream.getTracks().forEach((tr) => tr.stop()); return; }
         const v = video.current!; v.srcObject = stream; await v.play();
         setCam('on');
         const loop = async () => {
           if (stop) return;
+          const th = thRef.current;
           const preds = (await model.detect(v)).filter((p) => p.class === 'person' && p.score > 0.5);
           const c = canvas.current!, g = c.getContext('2d')!;
           c.width = v.videoWidth; c.height = v.videoHeight;
@@ -60,7 +69,7 @@ export default function Proximity() {
           let best: { d: number; dir: Dir } | null = null;
           for (const p of preds) {
             const [x, y, w, h] = p.bbox;
-            const d = +(1.82 / Math.max(0.05, h / v.videoHeight)).toFixed(1);
+            const d = personDistance([x, y, w, h], v.videoWidth, v.videoHeight);
             const cx = (x + w / 2) / v.videoWidth;
             const dir: Dir = cx < 0.33 ? 'left' : cx > 0.66 ? 'right' : 'rear';
             const tone = d < th.stop ? '#ff3b30' : d < th.warn ? '#ffa000' : '#3ddc84';
@@ -69,13 +78,13 @@ export default function Proximity() {
             if (!best || d < best.d) best = { d, dir };
           }
           setCamDist(best);
-          setTimeout(loop, 150);
+          if (!stop) setTimeout(loop, 120);
         };
         loop();
-      } catch (e) { console.error(e); setCam('error'); }
+      } catch (e) { console.error(e); if (!stop) setCam('error'); }
     })();
     return () => { stop = true; stream?.getTracks().forEach((tr) => tr.stop()); };
-  }, [cam, th.stop, th.warn]);
+  }, [camWanted]);
 
   // Nearest hazard → alerts, speech and auto incident.
   const all: { d: number; dir: Dir }[] = DIRS.map((dir) => ({ d: zones[dir], dir }));
@@ -138,7 +147,7 @@ export default function Proximity() {
       <p className="muted" style={{ fontSize: 13, textAlign: 'center' }}>{t('safety.buffers', { warn: th.warn, stop: th.stop })}</p>
       <div className="row">
         <button className="ghost" onClick={() => { intrusion.current = { dir: DIRS[Math.floor(Math.random() * 4)], d: 9 }; }}>{t('safety.simulate')}</button>
-        <button className="ghost" onClick={() => setCam(cam === 'off' || cam === 'error' ? 'loading' : 'off')}>
+        <button className="ghost" onClick={() => setCamWanted(!camWanted)}>
           📷 {cam === 'on' ? t('safety.camOff') : cam === 'loading' ? '…' : t('safety.camOn')}
         </button>
       </div>
