@@ -137,7 +137,8 @@
     "incidentLogged": "Logged as {{type}}. I can turn it into a lesson.",
     "mayday": "Emergency reported. Supervisor alerted.",
     "opening": "Opening {{screen}}.",
-    "noActiveTask": "No task is running right now."
+    "noActiveTask": "No task is running right now.",
+    "tapToStop": "Tap to stop listening"
   },
   "common": {
     "confirm": "Confirm",

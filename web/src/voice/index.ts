@@ -61,6 +61,8 @@ export function speakSequence(parts: string[], lang: Lang) {
 export function stopSpeaking() {
   gen++;
   queue.length = 0;
+  // Chrome stays paused after pause()+cancel(), which silences every later utterance: resume first.
+  window.speechSynthesis?.resume();
   window.speechSynthesis?.cancel();
   playing?.pause(); playing = null;
   speaking = false; paused = false; current = null;
@@ -97,12 +99,17 @@ async function drain() {
   const g = gen;
   speaking = true; current = next.text;
   emit();
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
   const done = () => {
+    clearTimeout(watchdog);
     if (g !== gen) return; // stopped meanwhile
     speaking = false; playing = null; current = null;
     emit();
     drain();
   };
+  // Generous upper bound on speaking time; skipped while paused.
+  const arm = () => { watchdog = setTimeout(() => (paused ? arm() : done()), 15000 + next.text.length * 120); };
+  arm();
   const voice = deviceVoice(next.lang);
   if (!voice && (await sarvamAvailable())) {
     const url = await sarvamTts(next.text, next.lang);
@@ -116,6 +123,7 @@ async function drain() {
     }
   }
   if (!('speechSynthesis' in window)) return done();
+  if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance(next.text);
   u.lang = SPEECH_LOCALE[next.lang];
   if (voice) u.voice = voice;
@@ -126,27 +134,45 @@ async function drain() {
 // ----- Listening -----
 type SR = { lang: string; interimResults: boolean; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; onerror: (e: unknown) => void; onend: () => void; start: () => void };
 
+// The active listen, so a second tap on the mic can end it.
+let listening: { stop: boolean; recognizer?: { stop: () => void } } | null = null;
+
+/** End the current listen now; whatever was said so far is still transcribed. */
+export function stopListening() {
+  if (!listening) return;
+  listening.stop = true;
+  listening.recognizer?.stop();
+}
+
 /**
  * Listen for one utterance. Sarvam first (best for Indian languages and code-mixed speech),
  * then the browser's recognition (Chrome, online). Rejects if neither is available.
  */
 export async function listen(lang: Lang): Promise<string> {
+  const ctl: { stop: boolean; recognizer?: { stop: () => void } } = { stop: false };
+  listening = ctl;
+  try { return await listenOnce(lang, ctl); } finally { if (listening === ctl) listening = null; }
+}
+
+async function listenOnce(lang: Lang, ctl: { stop: boolean; recognizer?: { stop: () => void } }): Promise<string> {
   if (await sarvamAvailable()) {
-    const audio = await recordUtterance().catch(() => null);
+    const audio = await recordUtterance(undefined, ctl).catch(() => null);
     if (!audio) return '';
     const r = await api.transcribe(audio, lang);
     if (r) return r.text;
     // Sarvam failed mid-request: fall through and let the browser try a fresh listen.
   }
-  return browserListen(lang);
+  if (ctl.stop) return '';
+  return browserListen(lang, ctl);
 }
 
-function browserListen(lang: Lang): Promise<string> {
+function browserListen(lang: Lang, ctl: { recognizer?: { stop: () => void } }): Promise<string> {
   const W = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
   const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
   if (!Ctor) return Promise.reject(new Error('speech-recognition-unavailable'));
   return new Promise((resolve, reject) => {
     const r = new Ctor();
+    ctl.recognizer = r as unknown as { stop: () => void };
     r.lang = SPEECH_LOCALE[lang];
     r.interimResults = false;
     let got = '';

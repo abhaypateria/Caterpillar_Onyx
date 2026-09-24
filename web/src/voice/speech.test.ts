@@ -9,6 +9,7 @@ const synth = {
   speak(u: Utt) { spoken.push(u); this.speaking = u; },
   cancel() { this.speaking = null; },
   pause() { this.pausedFlag = true; },
+  get paused() { return this.pausedFlag; },
   resume() { this.pausedFlag = false; },
   getVoices: () => [{ lang: 'en-IN' }],
 };
@@ -71,5 +72,21 @@ describe('speech queue', () => {
     v.speak('STOP. Person behind.', 'en', 'critical');
     await flush();
     expect(spoken.at(-1)?.text).toBe('STOP. Person behind.');
+  });
+});
+
+describe('Chrome paused-engine bug', () => {
+  it('after Pause then Stop, the next message still plays (engine resumed)', async () => {
+    v.stopSpeaking(); spoken.length = 0;
+    v.speakSequence(['Lesson title'], 'en');
+    await flush();
+    v.pauseSpeaking();
+    expect(synth.pausedFlag).toBe(true);
+    v.stopSpeaking();
+    expect(synth.pausedFlag).toBe(false);
+    v.speak('Next task: Trenching.', 'en');
+    await flush();
+    expect(spoken.at(-1)?.text).toBe('Next task: Trenching.');
+    expect(v.getSpeechState()).toBe('speaking');
   });
 });

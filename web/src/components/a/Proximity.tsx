@@ -54,7 +54,8 @@ export default function Proximity() {
       try {
         const [tf, coco] = await Promise.all([import('@tensorflow/tfjs'), import('@tensorflow-models/coco-ssd')]);
         await tf.ready();
-        const model = await coco.load({ base: 'lite_mobilenet_v2' });
+        // Bundled in public/models so the camera starts fast and works offline (no Google download).
+        const model = await coco.load({ base: 'lite_mobilenet_v2', modelUrl: '/models/ssdlite_mobilenet_v2/model.json' });
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         if (stop) { stream.getTracks().forEach((tr) => tr.stop()); return; }
         const v = video.current!; v.srcObject = stream; await v.play();

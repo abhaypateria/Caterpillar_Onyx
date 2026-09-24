@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../store';
 import { api } from '../api/client';
-import { listen, parseIntent, speak, type Intent } from '../voice';
+import { listen, parseIntent, speak, stopListening, stopSpeaking, type Intent } from '../voice';
 import { fitEta, predictEta, liveEta, PROVIDED_TASKS, OPERATORS, MACHINES } from '../engine';
 import type { ScheduledTask } from '../types';
 import { term } from '../i18n/term';
@@ -20,7 +20,8 @@ export default function VoiceButton() {
   const nav = useNavigate();
   const store = useStore();
   const { lang } = store;
-  const [on, setOn] = useState(false);
+  // idle → listening (tap again to stop) → thinking (transcribing / answering) → idle
+  const [phase, setPhase] = useState<'idle' | 'listening' | 'thinking'>('idle');
   const [heard, setHeard] = useState('');
   const [pending, setPending] = useState<Pending>(null);
 
@@ -151,11 +152,17 @@ export default function VoiceButton() {
     }
   }
 
+  // Mic is a toggle: tap to start, tap again to stop listening now.
   async function go() {
-    setOn(true);
+    if (phase === 'listening') { stopListening(); setPhase('thinking'); return; }
+    if (phase === 'thinking') return;
+    stopSpeaking(); // don't talk over the operator
+    setPhase('listening');
     setHeard(t('voice.listening'));
     try {
       const text = await listen(lang);
+      setPhase('thinking');
+      if (!text.trim()) { say('voice.didntCatch'); return; } // nothing heard: no LLM round-trip
       let intent = parseIntent(text);
       // Online fallback: let the LLM classify what the offline keywords missed.
       if (intent.name === 'unknown') {
@@ -167,14 +174,15 @@ export default function VoiceButton() {
     } catch {
       setHeard(t('voice.didntCatch'));
     } finally {
-      setOn(false);
+      setPhase('idle');
     }
   }
 
   return (
     <>
       {heard && <div className="voicetext card">{heard}</div>}
-      <button className={`voicebtn ${on ? 'on' : ''}`} onClick={go} aria-label={t('voice.tap')}>🎙</button>
+      <button className={`voicebtn ${phase === 'listening' ? 'on' : ''}`} onClick={go} aria-busy={phase === 'thinking'}
+        aria-label={phase === 'listening' ? t('voice.tapToStop') : t('voice.tap')}>{phase === 'listening' ? '⏹' : phase === 'thinking' ? '⏳' : '🎙'}</button>
     </>
   );
 }

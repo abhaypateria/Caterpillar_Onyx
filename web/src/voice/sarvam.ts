@@ -37,7 +37,8 @@ export function sarvamTts(text: string, lang: Lang): Promise<string | null> {
 const TARGET_RATE = 16000;
 
 /** Record until ~1.2 s of silence after speech (or 8 s max), return base64 WAV. */
-export async function recordUtterance(opts = { maxMs: 8000, silenceMs: 1200, noSpeechMs: 5000 }): Promise<string | null> {
+/** `control.stop = true` ends the recording early (the operator tapped the mic again). */
+export async function recordUtterance(opts = { maxMs: 8000, silenceMs: 1200, noSpeechMs: 5000 }, control: { stop: boolean } = { stop: false }): Promise<string | null> {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return null;
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
   const ctx = new AudioContext();
@@ -62,7 +63,7 @@ export async function recordUtterance(opts = { maxMs: 8000, silenceMs: 1200, noS
         const now = performance.now();
         if (rms > 0.015) { heard = true; lastLoud = now; }
         const elapsed = now - t0;
-        if (elapsed > opts.maxMs || (heard && now - lastLoud > opts.silenceMs) || (!heard && elapsed > opts.noSpeechMs)) {
+        if (control.stop || elapsed > opts.maxMs || (heard && now - lastLoud > opts.silenceMs) || (!heard && elapsed > opts.noSpeechMs)) {
           clearInterval(id); done();
         }
       }, 100);
