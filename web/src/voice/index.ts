@@ -176,8 +176,9 @@ function browserListen(lang: Lang, ctl: { recognizer?: { stop: () => void } }): 
     ctl.recognizer = r as unknown as { stop: () => void };
     r.lang = SPEECH_LOCALE[lang];
     r.interimResults = false;
+    (r as unknown as { continuous: boolean }).continuous = true; // runs until the operator presses stop
     let got = '';
-    r.onresult = (e) => { got = e.results[0][0].transcript; };
+    r.onresult = (e) => { got = Array.from(e.results as unknown as ArrayLike<{ 0: { transcript: string } }>, (x) => x[0].transcript).join(' '); };
     r.onerror = (e) => reject(e);
     r.onend = () => resolve(got);
     r.start();

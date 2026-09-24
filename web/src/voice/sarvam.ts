@@ -37,19 +37,14 @@ export function sarvamTts(text: string, lang: Lang): Promise<string | null> {
 const TARGET_RATE = 16000;
 
 /** Record until ~1.2 s of silence after speech (or 8 s max), return base64 WAV. */
-// Opening the microphone takes a moment; words spoken meanwhile were lost ("अगला काम क्या है" arrived
-// as "क्या है"). Keep one stream open after the first use so later taps record instantly.
-let micStream: MediaStream | null = null;
-async function getMic() {
-  if (micStream?.getAudioTracks().some((t) => t.readyState === 'live')) return micStream;
-  micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-  return micStream;
-}
-
-/** `control.stop = true` ends the recording early (the operator tapped the mic again). onStart fires once audio is being captured. */
-export async function recordUtterance(opts = { maxMs: 8000, silenceMs: 1200, noSpeechMs: 5000 }, control: { stop: boolean } = { stop: false }, onStart?: () => void): Promise<string | null> {
+/**
+ * Record from the mic until the operator presses the button again (`control.stop = true`), or maxMs as a safety cap.
+ * No automatic stop on silence: the operator decides. The mic is opened per recording and fully released after.
+ * onStart fires once audio is actually being captured, so the UI shows "Listening…" only when it is safe to speak.
+ */
+export async function recordUtterance(opts = { maxMs: 30000 }, control: { stop: boolean } = { stop: false }, onStart?: () => void): Promise<string | null> {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return null;
-  const stream = await getMic();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
   const ctx = new AudioContext();
   try {
     const analyser = ctx.createAnalyser();
@@ -65,15 +60,15 @@ export async function recordUtterance(opts = { maxMs: 8000, silenceMs: 1200, noS
     // Simple voice-activity detection on RMS level.
     const buf = new Float32Array(analyser.fftSize);
     const t0 = performance.now();
-    let heard = false, lastLoud = t0;
+    let heard = false;
     await new Promise<void>((done) => {
       const id = setInterval(() => {
         analyser.getFloatTimeDomainData(buf);
         const rms = Math.sqrt(buf.reduce((s, x) => s + x * x, 0) / buf.length);
         const now = performance.now();
-        if (rms > 0.015) { heard = true; lastLoud = now; }
+        if (rms > 0.015) heard = true;
         const elapsed = now - t0;
-        if (control.stop || elapsed > opts.maxMs || (heard && now - lastLoud > opts.silenceMs) || (!heard && elapsed > opts.noSpeechMs)) {
+        if (control.stop || elapsed > opts.maxMs) {
           clearInterval(id); done();
         }
       }, 100);
@@ -84,6 +79,7 @@ export async function recordUtterance(opts = { maxMs: 8000, silenceMs: 1200, noS
     const decoded = await ctx.decodeAudioData(await new Blob(chunks).arrayBuffer());
     return toWavBase64(await resampleMono(decoded));
   } finally {
+    stream.getTracks().forEach((t) => t.stop()); // mic fully off when not recording
     ctx.close();
   }
 }

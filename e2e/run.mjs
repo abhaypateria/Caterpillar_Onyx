@@ -331,6 +331,10 @@ if (want('voice')) {
     const { browser, page: p } = await launch({ audio: clip });
     await test(id, name, async () => {
       await login(p, lang); await sleep(800);
+      // Toggle mic: press once to start, wait for 'Listening' + the spoken clip, press again to stop.
+      await p.click('.voicebtn');
+      await waitFor(p, async () => /Listening|सुन रहा|கேட்கிறேன்|ಕೇಳುತ್ತಿದ್ದೇನೆ/.test(await p.$eval('.voicetext', (e) => e.textContent).catch(() => '')), 10000, 100);
+      await sleep(3500);
       await p.click('.voicebtn');
       await waitFor(p, async () => p.api.some((a) => a.startsWith('/speech/stt')), 15000, 300);
       let t = '';
